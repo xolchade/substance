@@ -169,7 +169,18 @@ body.open .pn{transform:none;visibility:visible}body.open .scrim{opacity:1;point
 .pen .ic{width:15px;height:15px}
 [data-ek].editing{outline:2px dashed var(--focus);outline-offset:3px;border-radius:6px;background:#F1EDFC;color:var(--ink);cursor:text}
 .del{flex:none;width:30px;height:30px;margin-left:4px;border:0;border-radius:50%;background:none;color:var(--muted2);display:grid;place-items:center;opacity:0;transition:opacity .15s,background-color .15s}
-.list>li:hover .del,.del:focus-visible{opacity:1}
+.list>li{position:relative}
+.itools{position:absolute;right:0;top:-3px;display:flex;align-items:center;gap:2px;padding-left:16px;background:linear-gradient(90deg,transparent,#fff 14px);opacity:0;pointer-events:none;transition:opacity .15s}
+.list>li:hover>.itools,.itools:focus-within{opacity:1;pointer-events:auto}
+.subadd{height:30px;padding:0 10px;border:0;border-radius:999px;background:none;color:var(--blue);font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:4px;opacity:0;transition:opacity .15s,background-color .15s;white-space:nowrap}
+.subadd .ic{width:14px;height:14px}
+.subadd:hover{background:var(--tint)}
+.itools .del,.itools .subadd{opacity:1}.del:focus-visible,.subadd:focus-visible{opacity:1}
+.sub li{display:flex;align-items:flex-start;gap:6px}
+.sub li>span{flex:1;min-width:0}
+.sub li .del{width:24px;height:24px;margin:0}
+.sub li:hover>.del{opacity:1}
+@media (hover:none){.del,.subadd,.itools{opacity:1;pointer-events:auto}.itools{position:static;background:none;padding:0}}
 .del:hover{background:var(--warn-bg);color:var(--warn)}
 .del .ic{width:15px;height:15px}
 .add{margin-top:14px;height:40px;padding:0 16px;border:1.5px dashed var(--blue);border-radius:999px;background:#fff;color:var(--blue);font-weight:600;font-size:14px;display:inline-flex;align-items:center;gap:6px;transition:background-color .15s}
@@ -180,7 +191,7 @@ body.open .pn{transform:none;visibility:visible}body.open .scrim{opacity:1;point
 .btools select{height:40px;border:1.5px solid var(--line);border-radius:999px;background:#fff;padding:0 12px;color:var(--ink);max-width:260px}
 .btools .rm{height:40px;padding:0 16px;border:1.5px solid #C2462A;color:#A93A20;border-radius:999px;background:#fff;font-weight:600;margin-left:auto;transition:background-color .15s,color .15s}
 .btools .rm:hover,.btools .rm.sure{background:#C2462A;color:#fff}
-body.ro .del,body.ro .add,body.ro .btools,body.ro .addn{display:none!important}
+body.ro .del,body.ro .subadd,body.ro .add,body.ro .btools,body.ro .addn{display:none!important}
 dialog.edl{width:min(720px,calc(100vw - 32px));max-height:min(80vh,760px);border:0;border-radius:28px;padding:0;color:var(--ink);box-shadow:0 30px 80px rgba(13,19,29,.35)}
 dialog.edl::backdrop{background:rgba(13,19,29,.45)}
 .edh{display:flex;align-items:center;gap:12px;padding:18px 22px;border-bottom:1px solid var(--line);position:sticky;top:0;background:#fff}
@@ -322,9 +333,10 @@ function applyOp(doc,op){const D=doc.depts[op.t];if(!D)return false;
   if(op.k==='set'){const ks=op.p.split('.'),l=ks.pop(),o=getP(D,ks.join('.'));if(o==null||typeof o[l]!=='string')return false;o[l]=op.v;return true}
   if(op.k==='ins'){const a=getP(D,op.p);if(!Array.isArray(a))return false;op.i=Math.min(op.i,a.length);a.splice(op.i,0,structuredClone(op.val));return true}
   if(op.k==='del'){const a=getP(D,op.p);if(!Array.isArray(a)||!same(a[op.i],op.val))return false;a.splice(op.i,1);return true}
+  if(op.k==='rep'){const a=getP(D,op.p);if(!Array.isArray(a)||!same(a[op.i],op.o))return false;a[op.i]=structuredClone(op.v);return true}
   if(op.k==='mv'){const a=getP(D,op.from),b=getP(D,op.to);if(!Array.isArray(a)||!Array.isArray(b)||a===b||!same(a[op.fi],op.val))return false;a.splice(op.fi,1);op.ti=Math.min(op.ti,b.length);b.splice(op.ti,0,structuredClone(op.val));return true}
   return false}
-const inverse=op=>op.k==='set'?{k:'set',t:op.t,p:op.p,o:op.v,v:op.o}:op.k==='ins'?{k:'del',t:op.t,p:op.p,i:op.i,val:op.val}:op.k==='del'?{k:'ins',t:op.t,p:op.p,i:op.i,val:op.val}:{k:'mv',t:op.t,from:op.to,fi:op.ti,to:op.from,ti:op.fi,val:op.val};
+const inverse=op=>op.k==='rep'?{k:'rep',t:op.t,p:op.p,i:op.i,o:op.v,v:op.o}:op.k==='set'?{k:'set',t:op.t,p:op.p,o:op.v,v:op.o}:op.k==='ins'?{k:'del',t:op.t,p:op.p,i:op.i,val:op.val}:op.k==='del'?{k:'ins',t:op.t,p:op.p,i:op.i,val:op.val}:{k:'mv',t:op.t,from:op.to,fi:op.ti,to:op.from,ti:op.fi,val:op.val};
 function doOp(op,after){op.a=USER;op.ts=Date.now();op.id=op.ts.toString(36)+Math.random().toString(36).slice(2,7);
   if(!applyOp(DOC,op)){refresh();syncSt('Правка не применилась — обновите страницу','bad');return false}DOC.log.push(op);PEND.push(op);refresh();if(after)after();if($('#edl').open)drawLog();persist();return true}
 
@@ -420,9 +432,10 @@ addEventListener('resize',rewire);if(document.fonts)document.fonts.ready.then(re
 /* ---------- панель ---------- */
 const delB=(base,k)=>`<button class="del" type="button" data-del="${base}" data-i="${k}" aria-label="Удалить пункт" title="Удалить пункт">${ic('x')}</button>`;
 const addB=base=>`<button class="add" type="button" data-add="${base}">${ic('plus')}Добавить пункт</button>`;
-function items(t,base,list,ed){return `<ul class="list">${list.map((it,k)=>{const p=`${base}.${k}`,d=ed?delB(base,k):'';
+const subB=(base,k)=>`<button class="subadd" type="button" data-subadd="${base}" data-i="${k}" title="Добавить подпункт">${ic('plus')}подпункт</button>`;
+function items(t,base,list,ed){return `<ul class="list">${list.map((it,k)=>{const p=`${base}.${k}`,d=ed?`<span class="itools">${subB(base,k)}${delB(base,k)}</span>`:'';
   if(typeof it==='string')return it.trim()?`<li>${ic('check')}<div>${E(t,p,'span','t r')}</div>${d}</li>`:'';
-  const sub=it.sub?(it.chips?`<div class="chips">${it.sub.map((x,q)=>E(t,`${p}.sub.${q}`,'span','chip')).join('')}</div>`:`<ul class="sub">${it.sub.map((x,q)=>E(t,`${p}.sub.${q}`,'li')).join('')}</ul>`):'';
+  const sub=it.sub?(it.chips?`<div class="chips">${it.sub.map((x,q)=>E(t,`${p}.sub.${q}`,'span','chip')).join('')}</div>`:`<ul class="sub">${it.sub.map((x,q)=>x.trim()?`<li>${E(t,`${p}.sub.${q}`)}${ed?delB(p+'.sub',q):''}</li>`:'').join('')}</ul>`):'';
   const tt=it.t!=null?E(t,p+'.t','span',it.sub||it.d?'t':'t r'):'';
   return (tt||sub||it.d)?`<li>${ic('check')}<div>${tt}${it.d!=null?E(t,p+'.d','span','d'):''}${sub}</div>${d}</li>`:''}).join('')}</ul>${ed?addB(base):''}`}
 const go=(id,label,cnt,cls='')=>`<button class="go ${cls}" type="button" data-go="${id}">${label}${cnt!=null?`<b>${cnt}</b>`:''}</button>`;
@@ -483,6 +496,9 @@ function openNode(id,keep){
   $$('#pb [data-tab]').forEach(b=>b.onclick=()=>setTab(b.dataset.tab,b.dataset.open));
   if(!RO&&TAB!=='all'){const t=TAB;
     $$('#pb [data-add]').forEach(b=>b.onclick=()=>{const base=b.dataset.add,a=getP(DD[t],base),i=a.length;doOp({k:'ins',t,p:base,i,val:'Новый пункт'},()=>{const el=$(`#pb [data-ek="${CSS.escape(base+'.'+i)}"]`);if(el)startEdit(el)})});
+    $$('#pb [data-subadd]').forEach(b=>b.onclick=()=>{const base=b.dataset.subadd,i=+b.dataset.i,cur=getP(DD[t],base)[i];
+      const v=typeof cur==='string'?{t:cur,sub:['Новый подпункт']}:{...structuredClone(cur),sub:[...(cur.sub||[]),'Новый подпункт']},n=v.sub.length-1;
+      doOp({k:'rep',t,p:base,i,o:structuredClone(cur),v},()=>{const el=$(`#pb [data-ek="${CSS.escape(base+'.'+i+'.sub.'+n)}"]`);if(el)startEdit(el)})});
     $$('#pb [data-del]').forEach(b=>b.onclick=()=>{const base=b.dataset.del,i=+b.dataset.i;doOp({k:'del',t,p:base,i,val:structuredClone(getP(DD[t],base)[i])})});
     $$('#pb [data-addb]').forEach(b=>b.onclick=()=>addBlock(+b.dataset.addb));
     const n=NODES[k];
@@ -524,7 +540,7 @@ function startEdit(el){
 }
 function setEdit(t,k,v,o){
   const ks=k.split('.'),l=ks.pop(),par=getP(DD[t],ks.join('.'));
-  if(v===''&&Array.isArray(par)&&/^(P\.\d+\.b\.\d+\.items|P\.\d+\.days\.\d+\.day\.\d+\.3)$/.test(ks.join('.')))return doOp({k:'del',t,p:ks.join('.'),i:+l,val:par[+l]});
+  if(v===''&&Array.isArray(par)&&/^(P\.\d+\.b\.\d+\.items|P\.\d+\.days\.\d+\.day\.\d+\.3|P\.\d+\.b\.\d+\.items\.\d+\.sub|P\.\d+\.days\.\d+\.day\.\d+\.3\.\d+\.sub)$/.test(ks.join('.')))return doOp({k:'del',t,p:ks.join('.'),i:+l,val:par[+l]});
   doOp({k:'set',t,p:k,o,v});
 }
 function refresh(){const id=curId,open=document.body.classList.contains('open');render();if(open&&id)openNode(id,true)}
@@ -537,6 +553,7 @@ function drawLog(){
   const L=DOC.log.slice(-300).reverse();
   $('#edb').innerHTML=L.length?L.map(op=>{const w=`${ABBR[op.t]} · ${esc(op.a||'')} · ${new Date(op.ts).toLocaleString('ru-RU',{dateStyle:'short',timeStyle:'short'})}${op.rev?' · возврат':''}`;
     const body=op.k==='set'?`<span class="o">${esc(op.o||'')}</span><span class="nv${op.v?'':' e'}">${op.v?esc(op.v):'Скрыто (текст удалён)'}</span>`
+      :op.k==='rep'?`<span class="nv add-t">Добавлен подпункт: ${esc(label(op.v)||'')} → ${esc((op.v.sub||[]).slice(-1)[0]||'')}</span>`
       :op.k==='ins'?`<span class="nv add-t">Добавлено: ${esc(label(op.val))}</span>`:op.k==='del'?`<span class="nv e">Удалено: ${esc(label(op.val))}</span>`
       :`<span class="nv">Перенесён блок «${esc(label(op.val))}» в этап «${esc(getP(DD[op.t],op.to.replace(/\.b$/,'.t'))||'')}»</span>`;
     const ok=canRevert(op);return `<div class="er"><span class="w">${w}</span>${body}<button type="button" data-id="${op.id||''}" ${ok?'':'disabled title="Эту правку нельзя вернуть автоматически"'}>Вернуть</button></div>`}).join('')
