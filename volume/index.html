@@ -50,8 +50,8 @@ h1,h2,h3,p{margin:0}
 .tab:hover{color:var(--ink);background:var(--soft)}
 .tab[aria-selected="true"]{border-color:var(--ink);background:var(--main);color:var(--ink)}
 .tools{display:flex;align-items:center;gap:8px;flex:none}
-.sync{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:var(--muted);white-space:nowrap}
-.sync i{width:9px;height:9px;border-radius:50%;background:#9ca3af}
+.sync{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:var(--muted);max-width:420px;line-height:1.25}
+.sync i{width:9px;height:9px;border-radius:50%;background:#9ca3af;flex:none}
 .sync.ok i{background:#16a34a}.sync.busy i{background:#d97706}.sync.bad{color:var(--red)}.sync.bad i{background:var(--red)}
 .tb{height:36px;border:2px solid var(--ink);border-radius:8px;background:#fff;padding:0 10px;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
 .tb:hover{background:var(--sub)}
@@ -496,7 +496,7 @@ const hdr=()=>({Authorization:'Bearer '+SYNC.token,Accept:'application/vnd.githu
 async function ghGet(){
   const r=await fetch(api()+'?t='+Date.now(),{headers:hdr(),cache:'no-store'});
   if(r.status===404)return {sha:null,data:{}};
-  if(!r.ok)throw new Error('GitHub '+r.status);
+  if(!r.ok)throw new Error(r.status===401?'токен GitHub недействителен или истёк':'GitHub '+r.status);
   const j=await r.json();return {sha:j.sha,data:await decJSON(JSON.parse(dec.decode(ub64(j.content.replace(/\n/g,'')))))};
 }
 async function syncPull(){
@@ -506,7 +506,7 @@ async function syncPull(){
   try{syncSt('Синхронизация…','busy');const {data}=await ghGet();const before=JSON.stringify(mergeE(ED,{}));ED=mergeE(data,ED);await saveLocal();
     if(JSON.stringify(mergeE(data,{}))!==JSON.stringify(ED))await syncPush();else syncSt('Сохранено на сервере','ok');
     if(JSON.stringify(ED)!==before&&!editing)refresh()}
-  catch(e){syncSt('Сервер недоступен','bad')}
+  catch(e){syncSt('Сервер недоступен: '+(e.name==='TypeError'?'нет связи с GitHub':e.message),'bad')}
 }
 let pushing=null;
 async function persist(){if(RO)return;await saveLocal();if(!SYNC){syncSt('Только в этом браузере','bad');return}pushing=(pushing||Promise.resolve()).then(syncPush);await pushing}
@@ -517,13 +517,18 @@ async function syncPush(){
       const {sha,data}=await ghGet();ED=mergeE(data,ED);
       const body={message:'volume: edits update',content:b64(enc.encode(JSON.stringify(await encJSON(ED))))};if(sha)body.sha=sha;
       const r=await fetch(api(),{method:'PUT',headers:{...hdr(),'Content-Type':'application/json'},body:JSON.stringify(body)});
-      if(r.status===409||r.status===422)continue;
-      if(!r.ok)throw new Error('GitHub '+r.status);
-      await saveLocal();syncSt('Сохранено на сервере','ok');return;
-    }catch(e){syncSt('Не сохранено на сервере','bad');return}
+      if(r.status===409||r.status===422){await new Promise(z=>setTimeout(z,600*(i+1)));continue}
+      if(!r.ok)throw new Error(r.status===401?'токен GitHub недействителен или истёк':'GitHub '+r.status);
+      await saveLocal();clearTimeout(retryT);retryN=0;syncSt('Сохранено на сервере','ok');return;
+    }catch(e){
+      const why=e.name==='TypeError'?'нет связи с GitHub':e.message;
+      if(retryN<5){retryN++;clearTimeout(retryT);retryT=setTimeout(()=>persist(),15000*retryN);syncSt(`Не сохранено: ${why}. Повторю автоматически`,'bad')}
+      else syncSt(`Не сохранено: ${why}. Правки остались в этом браузере`,'bad');
+      $('#sync').title='Правки хранятся в этом браузере и уйдут на сервер при следующей удачной попытке';return}
   }
-  syncSt('Конфликт, повторите правку','bad');
+  clearTimeout(retryT);retryT=setTimeout(()=>persist(),5000);syncSt('Конфликт при сохранении, повторяю…','busy');
 }
+let retryT=0,retryN=0;
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&KEY&&!editing)syncPull()});
 </script>
 </body>
