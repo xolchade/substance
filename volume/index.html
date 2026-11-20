@@ -286,18 +286,21 @@ const E=(t,p,tag='span',cls='')=>{const v=getP(DD[t],p),o=getP(RAW.depts[t],p);i
 const cItem=it=>typeof it==='string'?1:it.sub?it.sub.length:1;
 const cBlock=(D,b)=>b.flow?(D.FLOW||[]).length:Math.max(1,b.items.reduce((s,i)=>s+cItem(i),0));
 const cRow=r=>1+r[3].length;
-const cPhase=(D,p)=>p.day?p.day.reduce((s,r)=>s+cRow(r),0):p.b.reduce((s,b)=>s+cBlock(D,b),0);
+const cDay=d=>d.day.reduce((s,r)=>s+cRow(r),0);
+const cPhase=(D,p)=>p.days?p.days.reduce((s,d)=>s+cDay(d),0):p.b.reduce((s,b)=>s+cBlock(D,b),0);
+const nRowsOf=p=>p.days?p.days.reduce((s,d)=>s+d.day.length,0):0;
+const nMtoOf=p=>p.days?p.days.reduce((s,d)=>s+d.day.reduce((x,r)=>x+r[4].length,0),0):0;
 const total=D=>D.P.reduce((s,p)=>s+cPhase(D,p),0);
 const nDir=D=>D.P.reduce((s,p)=>s+(p.b?p.b.length:0),0);
-const unit=(p,n)=>p.day?plural(n,'задача','задачи','задач'):plural(n,'действие','действия','действий');
+const unit=(p,n)=>p.days?plural(n,'задача','задачи','задач'):plural(n,'действие','действия','действий');
 
 /* ---------- узлы карты отдела ---------- */
 function nodesOf(t){const D=DD[t],N=[];
   D.P.forEach((p,i)=>{N.push({k:'p',i});
-    if(p.day)p.day.forEach((r,j)=>N.push({k:'r',i,j}));
+    if(p.days)p.days.forEach((d,j)=>{N.push({k:'y',i,j});d.day.forEach((r,q)=>N.push({k:'r',i,j,q}))});
     else p.b.forEach((b,j)=>{N.push({k:'b',i,j});if(b.flow){(D.FLOW||[]).forEach((s,x)=>N.push({k:'s',i,j,x}));N.push({k:'x',i,j})}})});
   return N}
-const idOf=n=>n.k==='p'?`p${n.i}`:n.k==='b'?`b${n.i}-${n.j}`:n.k==='r'?`r${n.i}-${n.j}`:n.k==='s'?`s${n.x}`:n.k==='x'?'x':n.k==='d'?`d-${n.t}`:`g-${n.t}-${n.i}`;
+const idOf=n=>n.k==='p'?`p${n.i}`:n.k==='b'?`b${n.i}-${n.j}`:n.k==='y'?`y${n.i}-${n.j}`:n.k==='r'?`r${n.i}-${n.j}-${n.q}`:n.k==='s'?`s${n.x}`:n.k==='x'?'x':n.k==='d'?`d-${n.t}`:`g-${n.t}-${n.i}`;
 let NODES=[];
 
 /* ---------- отрисовка ---------- */
@@ -325,10 +328,10 @@ function renderDept(t){
   NODES=nodesOf(t);
   $('#rows').innerHTML=D.P.map((p,i)=>{
     let L=[],R=[];
-    if(p.day){const h=Math.ceil(p.day.length/2);p.day.forEach((r,j)=>(j<h?L:R).push(j))}
+    if(p.days)R=p.days.map((d,j)=>j);
     else{const fl=p.b.map((b,j)=>j).filter(j=>p.b[j].flow),rest=p.b.map((b,j)=>j).filter(j=>!p.b[j].flow);if(fl.length){R=fl;L=rest}else rest.forEach((j,k)=>(k%2?R:L).push(j))}
     const node=j=>{
-      if(p.day){const r=p.day[j];if(!r[1].trim())return '';return `<button class="n${r[6]?' life':''}" type="button" data-id="r${i}-${j}"><span class="tm">${esc(r[0])}</span>${esc(r[1])}${r[3].length?`<span class="c">${cRow(r)}</span>`:''}</button>`}
+      if(p.days){const d=p.days[j];return d.t.trim()?`<button class="n" type="button" data-id="y${i}-${j}">${esc(d.t)}<span class="c">${cDay(d)}</span></button>`:''}
       const b=p.b[j];if(!b.t.trim())return '';
       const head=`<button class="n" type="button" data-id="b${i}-${j}">${esc(b.t)}<span class="c">${cBlock(D,b)}</span></button>`;
       return b.flow?head+`<div class="steps">${(D.FLOW||[]).map((s,x)=>`<button class="n st" type="button" data-id="s${x}"><b>${x+1}</b>${esc(s.t)}</button>`).join('')}<button class="n st ex" type="button" data-id="x">Отказ, самоотказ и другие выходы</button></div>`:head};
@@ -339,14 +342,14 @@ function renderDept(t){
 function renderAll(){
   document.title='Объём работы лидерской программы';
   const tot=DEP.map(t=>({t,D:DD[t],T:total(DD[t]),B:nDir(DD[t]),S:DD[t].P.length}));
-  const sum=f=>tot.reduce((s,x)=>s+x[f],0),nRows=DD.oo.P.filter(p=>p.day).reduce((s,p)=>s+p.day.length,0);
+  const sum=f=>tot.reduce((s,x)=>s+x[f],0),nRows=DD.oo.P.reduce((s,p)=>s+nRowsOf(p),0);
   $('#top').innerHTML=`<div class="box legend" aria-label="Обозначения"><div><i class="m"></i><span>Отдел — нажмите, чтобы увидеть его этапы</span></div><div><i class="s"></i><span>Этап отдела — откроет его на карте отдела</span></div><div><i class="k">9</i><span>Сколько действий или задач внутри</span></div></div>
     <div class="box who"><div>${E('oo','people.0.0','span','r')}${E('oo','people.0.1','span','nm')}${E('oo','people.0.2','span','ps')}</div>${DEP.map(t=>person(t,1)).join('')}
     <div class="tot"><b>3</b><span>отдела</span><b>${sum('S')}</b><span>этапов работы</span><b>${sum('B')}</b><span>направлений</span><b>${nRows}</b><span>пунктов расписания программы</span><b>${sum('T')}</b><span>действий и задач</span></div></div>`;
   $('#intro').innerHTML='<p>Совокупный объём работы трёх отделов лидерской программы. Подробная карта каждого отдела — во вкладках ОП, ОО и ОТиС.</p>';
   $('#ttl').innerHTML='<span>Лидерская программа «100 Лидеров»</span>';
   NODES=[];tot.forEach(({t,D})=>{NODES.push({k:'d',t});D.P.forEach((p,i)=>NODES.push({k:'g',t,i}))});
-  $('#rows').innerHTML=tot.map(({t,D})=>{const L=[],R=[],hasDay=D.P.some(p=>p.day);D.P.forEach((p,i)=>(hasDay?(p.day?R:L):(i%2?R:L)).push(i));
+  $('#rows').innerHTML=tot.map(({t,D})=>{const L=[],R=[],hasDay=D.P.some(p=>p.days);D.P.forEach((p,i)=>(hasDay?(p.days?R:L):(i%2?R:L)).push(i));
     const node=i=>{const p=D.P[i],n=cPhase(D,p);return p.t.trim()?`<button class="n" type="button" data-id="g-${t}-${i}">${esc(p.t)}<span class="c">${n}</span></button>`:''};
     return `<section class="row" aria-label="${esc(D.dept)}"><div class="col l">${L.map(node).join('')}</div>
       <button class="n main" type="button" data-id="d-${t}">${esc(D.dept)}<span class="c">${total(D)}</span></button><div class="col r">${R.map(node).join('')}</div></section>`}).join('');
@@ -384,24 +387,29 @@ function body(n){
       <p class="lead">${E(t,'lead')}</p><h3>Этапы</h3><div class="links">${D.P.map((p,i)=>go(`g-${t}-${i}`,esc(p.t),cPhase(D,p))).join('')}</div>
       <h3>Карта отдела</h3><div class="links"><button class="go m" type="button" data-tab="${t}">Открыть вкладку ${ABBR[t]} ${ic('arrow')}</button></div>`}}
   if(n.k==='g'){const t=n.t,D=DD[t],p=D.P[n.i],c=cPhase(D,p);
-    const list=p.day?p.day.map((r,j)=>r[1].trim()?`<button class="go ${r[6]?'g':'w'}" type="button" data-tab="${t}" data-open="r${n.i}-${j}"><span class="tm">${esc(r[0])}</span>${esc(r[1])}</button>`:'').join('')
+    const list=p.days?p.days.map((d,j)=>d.t.trim()?`<button class="go" type="button" data-tab="${t}" data-open="y${n.i}-${j}">${esc(d.t)}<b>${cDay(d)}</b></button>`:'').join('')
       :p.b.map((b,j)=>b.t.trim()?`<button class="go" type="button" data-tab="${t}" data-open="b${n.i}-${j}">${esc(b.t)}<b>${cBlock(D,b)}</b></button>`:'').join('');
     return {crumb:`${ABBR[t]} · этап ${n.i+1} из ${D.P.length}`,html:`<h2 id="pt">${E(t,`P.${n.i}.t`)}</h2><div class="meta"><span class="tag y">${esc(D.dept)}</span><span class="tag">${c} ${unit(p,c)}</span></div>
-      <h3>${p.day?'Расписание':'Направления этапа'}</h3><div class="links">${list}</div>`}}
+      <h3>${p.days?'Дни программы':'Направления этапа'}</h3><div class="links">${list}</div>`}}
   const t=TAB,D=DD[t];
+  const rowBtn=(i,j,q,r)=>r[1].trim()?`<button class="go ${r[6]?'g':'w'}" type="button" data-go="r${i}-${j}-${q}"><span class="tm">${esc(r[0])}</span>${esc(r[1])}</button>`:'';
   if(n.k==='p'){const p=D.P[n.i],c=cPhase(D,p);
-    const list=p.day?p.day.map((r,j)=>r[1].trim()?`<button class="go ${r[6]?'g':'w'}" type="button" data-go="r${n.i}-${j}"><span class="tm">${esc(r[0])}</span>${esc(r[1])}</button>`:'').join('')
-      :p.b.map((b,j)=>b.t.trim()?go(`b${n.i}-${j}`,esc(b.t),cBlock(D,b)):'').join('');
-    return {crumb:`Этап ${n.i+1} из ${D.P.length}`,html:`<h2 id="pt">${E(t,`P.${n.i}.t`)}</h2><div class="meta">${p.day?`<span class="tag y">${p.day.length} ${plural(p.day.length,'пункт','пункта','пунктов')} расписания</span><span class="tag">${p.day.reduce((s,r)=>s+r[4].length,0)} МТО</span>`:`<span class="tag y">${p.b.length} ${plural(p.b.length,'направление','направления','направлений')}</span>`}<span class="tag">${c} ${unit(p,c)}</span></div>
-      <h3>${p.day?'Расписание дня':'Направления этапа'}</h3><div class="links">${list}</div>`}}
+    if(p.days)return {crumb:`Этап ${n.i+1} из ${D.P.length}`,html:`<h2 id="pt">${E(t,`P.${n.i}.t`)}</h2><div class="meta"><span class="tag y">${p.days.length} ${plural(p.days.length,'день','дня','дней')}</span><span class="tag">${nRowsOf(p)} ${plural(nRowsOf(p),'пункт','пункта','пунктов')} расписания</span><span class="tag">${c} ${unit(p,c)}</span><span class="tag">${nMtoOf(p)} МТО</span></div>
+      ${p.days.map((d,j)=>`<h3>${esc(d.t)}</h3><div class="links">${d.day.map((r,q)=>rowBtn(n.i,j,q,r)).join('')}</div>`).join('')}`};
+    const list=p.b.map((b,j)=>b.t.trim()?go(`b${n.i}-${j}`,esc(b.t),cBlock(D,b)):'').join('');
+    return {crumb:`Этап ${n.i+1} из ${D.P.length}`,html:`<h2 id="pt">${E(t,`P.${n.i}.t`)}</h2><div class="meta"><span class="tag y">${p.b.length} ${plural(p.b.length,'направление','направления','направлений')}</span><span class="tag">${c} ${unit(p,c)}</span></div>
+      <h3>Направления этапа</h3><div class="links">${list}</div>`}}
+  if(n.k==='y'){const p=D.P[n.i],d=p.days[n.j],c=cDay(d),m=d.day.reduce((x,r)=>x+r[4].length,0);
+    return {crumb:`${p.t} · день ${n.j+1} из ${p.days.length}`,html:`<h2 id="pt">${E(t,`P.${n.i}.days.${n.j}.t`)}</h2><div class="meta"><span class="tag y">${d.day.length} ${plural(d.day.length,'пункт','пункта','пунктов')} расписания</span><span class="tag">${c} ${plural(c,'задача','задачи','задач')}</span><span class="tag">${m} МТО</span></div>
+      <h3>Расписание дня</h3><div class="links">${d.day.map((r,q)=>rowBtn(n.i,n.j,q,r)).join('')}</div>`}}
   if(n.k==='b'){const p=D.P[n.i],b=p.b[n.j],c=cBlock(D,b),bp=`P.${n.i}.b.${n.j}`;
     const head=`<h2 id="pt">${E(t,bp+'.t')}</h2><div class="meta"><span class="tag y">${esc(p.t)}</span><span class="tag">${c} ${b.flow?plural(c,'стадия','стадии','стадий'):plural(c,'действие','действия','действий')}</span></div>`;
     if(b.flow)return {crumb:p.t,html:head+`<h3>Путь лида по стадиям</h3><div class="links">${D.FLOW.map((s,x)=>go(`s${x}`,`<span class="num">${x+1}</span>${esc(s.t)}`,null,'w')).join('')}${go('x','Отказ, самоотказ и другие выходы',null,'g')}</div>`};
     return {crumb:p.t,html:head+items(t,bp+'.items',b.items)
       +(b.contacts?`<h3>Контакты подразделений</h3><ul class="list">${b.contacts.map((x,k)=>`<li>${ic('check')}<div>${E(t,`${bp}.contacts.${k}.0`,'span','t')}${x[1]?E(t,`${bp}.contacts.${k}.1`,'span','d'):''}</div></li>`).join('')}</ul>`:'')
       +(b.note!=null?E(t,bp+'.note','span','note'):'')}}
-  if(n.k==='r'){const p=D.P[n.i],r=p.day[n.j],rp=`P.${n.i}.day.${n.j}`;
-    return {crumb:`${p.t} · пункт ${n.j+1} из ${p.day.length}`,html:`<h2 id="pt">${E(t,rp+'.1')}</h2><div class="meta"><span class="tag y">${E(t,rp+'.0')}</span>${r[2]?`<span class="tag">${E(t,rp+'.2')}</span>`:''}</div>
+  if(n.k==='r'){const d=D.P[n.i].days[n.j],r=d.day[n.q],rp=`P.${n.i}.days.${n.j}.day.${n.q}`;
+    return {crumb:`${d.t} · пункт ${n.q+1} из ${d.day.length}`,html:`<h2 id="pt">${E(t,rp+'.1')}</h2><div class="meta"><span class="tag y">${E(t,rp+'.0')}</span>${r[2]?`<span class="tag">${E(t,rp+'.2')}</span>`:''}</div>
       ${r[3].length?`<h3>Задачи</h3>${items(t,rp+'.3',r[3])}`:''}
       ${r[4].length?`<h3>МТО</h3><div class="chips">${r[4].map((x,k)=>E(t,`${rp}.4.${k}`,'span','chip w')).join('')}</div>`:''}
       ${r[5]?E(t,rp+'.5','span','note'):''}${!r[3].length&&!r[4].length&&!r[5]?'<p class="lead" style="color:var(--muted)">Без задач отдела в этом пункте расписания.</p>':''}`}}
@@ -416,7 +424,7 @@ function body(n){
     <h3>Также с любой стадии</h3><div class="chips">${D.ALWAYS.map((x,k)=>E(t,`ALWAYS.${k}`,'span','chip')).join('')}</div>`};
 }
 const nameOf=n=>{if(!n)return '';const D=n.t?DD[n.t]:DD[TAB];
-  return n.k==='d'?D.dept:n.k==='g'?D.P[n.i].t:n.k==='p'?D.P[n.i].t:n.k==='b'?D.P[n.i].b[n.j].t:n.k==='r'?D.P[n.i].day[n.j][1]:n.k==='s'?D.FLOW[n.x].t:'Выходы'};
+  return n.k==='d'?D.dept:n.k==='g'?D.P[n.i].t:n.k==='p'?D.P[n.i].t:n.k==='b'?D.P[n.i].b[n.j].t:n.k==='y'?D.P[n.i].days[n.j].t:n.k==='r'?D.P[n.i].days[n.j].day[n.q][1]:n.k==='s'?D.FLOW[n.x].t:'Выходы'};
 let cur=-1,curId=null,lastFocus=null;
 function openNode(id,keep){
   const k=NODES.findIndex(n=>idOf(n)===id);if(k<0)return;cur=k;curId=id;const {crumb,html}=body(NODES[k]);
