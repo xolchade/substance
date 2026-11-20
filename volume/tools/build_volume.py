@@ -1,5 +1,6 @@
 # Шифрует содержимое «Объёма работы» (content.json) тем же ключом и пользователями, что и календарь стратсессии
 # Пример: python3 build_volume.py content.json --admin ЛОГИН:ПАРОЛЬ
+# Пользователи (включая гостя и ключ правок) берутся из текущего volume/data.enc.json
 import argparse, base64, hashlib, json, os
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
@@ -13,5 +14,6 @@ e = next(x for x in d['users'] if x['u'] == hashlib.sha256(('strat:' + login.low
 kek = PBKDF2HMAC(hashes.SHA256(), 32, ub(e['salt']), e.get('it', d['iter'])).derive((login.lower() + ':' + pwd).encode())
 dk = AESGCM(kek).decrypt(ub(e['iv']), ub(e['wk']), None)
 iv = os.urandom(12); data = json.dumps(json.load(open(a.src)), ensure_ascii=False).encode()
-json.dump({'iter': d['iter'], 'users': d['users'], 'iv': b64(iv), 'ct': b64(AESGCM(dk).encrypt(iv, data, None))}, open(os.path.join(ROOT, 'data.enc.json'), 'w'))
+cur = os.path.join(ROOT, 'data.enc.json'); users = json.load(open(cur))['users'] if os.path.exists(cur) else d['users']
+json.dump({'iter': d['iter'], 'users': users, 'iv': b64(iv), 'ct': b64(AESGCM(dk).encrypt(iv, data, None))}, open(os.path.join(ROOT, 'data.enc.json'), 'w'))
 print('OK volume/data.enc.json')
