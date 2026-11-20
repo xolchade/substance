@@ -346,7 +346,7 @@ function renderAll(){
   $('#intro').innerHTML='<p>Совокупный объём работы трёх отделов лидерской программы. Подробная карта каждого отдела — во вкладках ОП, ОО и ОТиС.</p>';
   $('#ttl').innerHTML='<span>Лидерская программа «100 Лидеров»</span>';
   NODES=[];tot.forEach(({t,D})=>{NODES.push({k:'d',t});D.P.forEach((p,i)=>NODES.push({k:'g',t,i}))});
-  $('#rows').innerHTML=tot.map(({t,D})=>{const L=[],R=[];D.P.forEach((p,i)=>(i%2?R:L).push(i));
+  $('#rows').innerHTML=tot.map(({t,D})=>{const L=[],R=[],hasDay=D.P.some(p=>p.day);D.P.forEach((p,i)=>(hasDay?(p.day?R:L):(i%2?R:L)).push(i));
     const node=i=>{const p=D.P[i],n=cPhase(D,p);return p.t.trim()?`<button class="n" type="button" data-id="g-${t}-${i}">${esc(p.t)}<span class="c">${n}</span></button>`:''};
     return `<section class="row" aria-label="${esc(D.dept)}"><div class="col l">${L.map(node).join('')}</div>
       <button class="n main" type="button" data-id="d-${t}">${esc(D.dept)}<span class="c">${total(D)}</span></button><div class="col r">${R.map(node).join('')}</div></section>`}).join('');
