@@ -394,7 +394,7 @@ const paintMode=()=>{$('#lform').classList.toggle('guest',GUEST);$('#lu').requir
 $('#gbtn').onclick=()=>{GUEST=!GUEST;paintMode()};
 $('#lform').addEventListener('submit',async e=>{e.preventDefault();const b=$('#lbtn');b.disabled=true;b.textContent='Проверяю…';$('#lerr').textContent='';
   try{await login(GUEST?'guest':$('#lu').value,$('#lp').value)}catch(err){$('#lerr').textContent=err.message}b.disabled=false;b.textContent='Войти'});
-(async()=>{const k=ss.g('vol.k'),u=ss.g('vol.u'),s=ss.g('vol.s');if(k&&u){try{await openApp(ub64(k),u,null,s?ub64(s):null)}catch(e){ss.d('vol.k')}}})();
+(async()=>{const k=ss.g('vol.k'),u=ss.g('vol.u'),s=ss.g('vol.s');if(k&&u&&(s||u==='guest')){try{await openApp(ub64(k),u,null,s?ub64(s):null)}catch(e){ss.d('vol.k')}}})();
 
 /* ---------- подсчёт объёма ---------- */
 const DEP=['op','oo','otis'],COL={op:'--c1',oo:'--c2',otis:'--c3'},ABBR={op:'ОП',oo:'ОО',otis:'ОТиС'};
