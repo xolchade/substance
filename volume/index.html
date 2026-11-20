@@ -480,22 +480,25 @@ const mergeE=(a,b)=>{const out={};for(const t of DEP){out[t]={...(a&&a[t]||{})};
 async function readLocal(){const s=ls.g('vol.e');if(!s)return {};try{return await decJSON(JSON.parse(s))}catch(e){return {}}}
 const saveLocal=async()=>ls.s('vol.e',JSON.stringify(await encJSON(ED)));
 function syncSt(t,c){const e=$('#sync');e.className='sync '+(c||'');e.querySelector('span').textContent=t}
-// запасной путь к GitHub API через Cloudflare Worker на своём домене (xolchade.dev/gh/…)
+// запасной путь к GitHub API через Cloudflare Worker на своём домене (xolchade.dev/gh/…).
+// Переключаемся на него, только если прямой запрос не дошёл и прокси действительно ответил от GitHub.
 (()=>{const F=window.fetch.bind(window),D='https://api.github.com/',P=location.origin+'/gh/',can=!/github\.io$/.test(location.hostname)&&location.protocol==='https:';
-  let via=ss.g('strat.ghvia');
+  const fromGH=r=>!!r.headers.get('x-github-request-id')||/json/.test(r.headers.get('content-type')||'');
+  let via=ss.g('vol.ghvia')==='1';
+  const viaProxy=async(u,o)=>{const r=await F(P+u.slice(D.length),o);if(!fromGH(r))throw new TypeError('proxy');return r};
   window.fetch=async(u,o)=>{
-    if(typeof u!=='string'||!u.startsWith(D)||!can)return F(u,o);
-    if(via)return F(P+u.slice(D.length),o);
-    const c=new AbortController(),t=setTimeout(()=>c.abort(),8000);
+    if(typeof u!=='string'||!u.startsWith(D))return F(u,o);
+    if(via&&can){try{return await viaProxy(u,o)}catch(e){via=false;ss.d('vol.ghvia')}}
+    const put=o&&o.method&&o.method!=='GET',c=new AbortController(),t=setTimeout(()=>c.abort(),put?45000:10000);
     try{const r=await F(u,{...(o||{}),signal:c.signal});clearTimeout(t);return r}
-    catch(e){clearTimeout(t);via='1';ss.s('strat.ghvia','1');return F(P+u.slice(D.length),o)}
+    catch(e){clearTimeout(t);if(!can)throw e;const r=await viaProxy(u,o);via=true;ss.s('vol.ghvia','1');return r}
   };
 })();
 const api=()=>`https://api.github.com/repos/${SYNC.repo}/contents/${SYNC.path}`;
 const hdr=()=>({Authorization:'Bearer '+SYNC.token,Accept:'application/vnd.github+json'});
 async function ghGet(){
   const r=await fetch(api()+'?t='+Date.now(),{headers:hdr(),cache:'no-store'});
-  if(r.status===404)return {sha:null,data:{}};
+  if(r.status===404&&r.headers.get('x-github-request-id'))return {sha:null,data:{}};
   if(!r.ok)throw new Error(r.status===401?'токен GitHub недействителен или истёк':'GitHub '+r.status);
   const j=await r.json();return {sha:j.sha,data:await decJSON(JSON.parse(dec.decode(ub64(j.content.replace(/\n/g,'')))))};
 }
