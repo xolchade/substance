@@ -165,6 +165,22 @@ dialog.edl::backdrop{background:rgba(0,0,0,.35)}
 .er button:hover{background:var(--sub)}
 .edb .none{padding:22px 0;color:var(--muted)}
 
+.del{flex:none;width:28px;height:28px;margin-left:4px;border:1.5px solid transparent;border-radius:7px;background:none;color:var(--muted2);display:grid;place-items:center;opacity:0;transition:opacity .15s}
+.list>li:hover .del,.del:focus-visible{opacity:1}
+.del:hover{border-color:var(--red);color:var(--red);background:var(--red-bg)}
+.del .ic{width:15px;height:15px}
+.add{margin-top:12px;height:38px;padding:0 14px;border:2px dashed var(--ink);border-radius:8px;background:#fff;font-weight:600;font-size:14px;display:inline-flex;align-items:center;gap:6px}
+.add:hover{background:var(--sub)}
+.btools{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:26px;padding-top:16px;border-top:1px solid var(--hair);font-size:14px}
+.btools label{display:flex;align-items:center;gap:8px;font-weight:600;color:var(--muted)}
+.btools select{height:38px;border:2px solid var(--ink);border-radius:8px;background:#fff;padding:0 8px;font:inherit;color:var(--ink);max-width:260px}
+.btools .rm{height:38px;padding:0 12px;border:2px solid var(--red);color:var(--red);border-radius:8px;background:#fff;font-weight:600;margin-left:auto}
+.btools .rm:hover,.btools .rm.sure{background:var(--red);color:#fff}
+.n.addn{background:#fff;border-style:dashed;color:var(--muted);font-family:var(--fb);font-weight:600;font-size:14px;padding:7px 12px}
+.n.addn:hover{background:var(--sub);color:var(--ink)}
+body.ro .del,body.ro .add,body.ro .btools,body.ro .addn{display:none!important}
+.er .nv.add-t{color:var(--ok)}
+.er button:disabled{opacity:.4;cursor:default;background:#fff}
 @media (max-width:900px){
   .row{grid-template-columns:1fr;row-gap:10px;padding:18px 0}
   .n.main{width:min(100%,360px);order:-1}.col.l{order:1}.col.r{order:2}
@@ -227,7 +243,7 @@ const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&g
 const plural=(n,a,b,c)=>{const m=n%10,h=n%100;return m===1&&h!==11?a:m>=2&&m<=4&&(h<10||h>=20)?b:c};
 const I={check:'<path d="M20 6 9 17l-5-5"/>',alert:'<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
  loop:'<path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/>',hist:'<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>',
- arrow:'<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',pin:'<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>'};
+ arrow:'<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',plus:'<path d="M12 5v14M5 12h14"/>',x:'<path d="M18 6 6 18M6 6l12 12"/>',pin:'<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>'};
 const ic=n=>`<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${I[n]}</svg>`;
 const mk=S=>({g(k){try{return S().getItem(k)}catch(e){return null}},s(k,v){try{S().setItem(k,v)}catch(e){}},d(k){try{S().removeItem(k)}catch(e){}}});
 const ls=mk(()=>localStorage),ss=mk(()=>sessionStorage);
@@ -239,7 +255,7 @@ const ub64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
 const sha=async s=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',enc.encode(s)))].map(x=>x.toString(16).padStart(2,'0')).join('');
 const aesDec=async(k,iv,ct)=>new Uint8Array(await crypto.subtle.decrypt({name:'AES-GCM',iv:ub64(iv)},k,ub64(ct)));
 const aesEnc=async(k,bytes)=>{const iv=crypto.getRandomValues(new Uint8Array(12));return {iv:b64(iv),ct:b64(await crypto.subtle.encrypt({name:'AES-GCM',iv},k,bytes))}};
-let KEY=null,SKEY=null,USER='',RAW=null,TAB='all',ED={},SYNC=null,RO=true;
+let KEY=null,SKEY=null,USER='',RAW=null,TAB='all',SYNC=null,RO=true,DOC=null,PEND=[];
 const encJSON=o=>aesEnc(KEY,enc.encode(JSON.stringify(o)));
 const decJSON=async o=>JSON.parse(dec.decode(await aesDec(KEY,o.iv,o.ct)));
 const getJSON=async f=>{const r=await fetch(f+'?t='+Date.now(),{cache:'no-store'});if(!r.ok)throw new Error('Нет файла '+f);return r.json()};
@@ -260,9 +276,10 @@ async function openApp(raw,u,data,sraw){
   RO=!sraw;SKEY=sraw?await crypto.subtle.importKey('raw',sraw,'AES-GCM',false,['decrypt']):null;
   document.body.classList.toggle('ro',RO);
   data=data||await getJSON('data.enc.json');RAW=await decJSON(data);
-  ED=await readLocal();
+  DOC={depts:structuredClone(RAW.depts),log:[]};PEND=[];
+  const loc=await readLocal();if(loc&&loc.doc){DOC=loc.doc;PEND=loc.pend||[]}
   $('#login').classList.add('hidden');$('#app').classList.remove('hidden');
-  const t=ss.g('vol.tab');TAB=t&&(t==='all'||RAW.depts[t])?t:'all';
+  const t=ss.g('vol.tab');TAB=t&&(t==='all'||DOC.depts[t])?t:'all';
   render();syncPull();
 }
 let GUEST=false;
@@ -272,15 +289,22 @@ $('#lform').addEventListener('submit',async e=>{e.preventDefault();const b=$('#l
 $('#logout').onclick=()=>{['vol.k','vol.u','vol.s','vol.tab'].forEach(ss.d);location.reload()};
 (async()=>{const k=ss.g('vol.k'),u=ss.g('vol.u'),s=ss.g('vol.s');if(k&&u&&(s||u==='guest')){try{await openApp(ub64(k),u,null,s?ub64(s):null)}catch(e){ss.d('vol.k')}}})();
 
-/* ---------- правки поверх данных: ключ = путь в данных отдела (P.0.b.1.t и т. п.) ---------- */
+/* ---------- документ и операции правки: путь = место в данных отдела (P.0.b.1.t и т. п.) ---------- */
 const DEP=['op','oo','otis'],ABBR={op:'ОП',oo:'ОО',otis:'ОТиС'};
 const getP=(o,p)=>p.split('.').reduce((x,k)=>x==null?x:x[k],o);
-function setP(o,p,v){const ks=p.split('.'),last=ks.pop();const t=ks.reduce((x,k)=>x==null?x:x[k],o);if(t!=null&&last in t&&typeof t[last]==='string')t[last]=v}
-const live=t=>Object.entries(ED[t]||{}).filter(([k,e])=>!e.reset&&typeof e.v==='string'&&!k.startsWith('.'));
-const deptOf=t=>{const D=structuredClone(RAW.depts[t]);live(t).forEach(([k,e])=>setP(D,k,e.v));return D};
-let DD={};const rebuild=()=>{DD={};DEP.forEach(t=>DD[t]=deptOf(t))};
+const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+let DD={};const rebuild=()=>{DD=DOC.depts};
 /* редактируемый текст: E(вкладка, путь, тег, класс) */
-const E=(t,p,tag='span',cls='')=>{const v=getP(DD[t],p),o=getP(RAW.depts[t],p);if(typeof v!=='string')return '';return v.trim()?`<${tag}${cls?` class="${cls}"`:''} data-et="${t}" data-ek="${esc(p)}" data-o="${esc(o)}">${esc(v)}</${tag}>`:''};
+const E=(t,p,tag='span',cls='')=>{const v=getP(DD[t],p);if(typeof v!=='string')return '';return v.trim()?`<${tag}${cls?` class="${cls}"`:''} data-et="${t}" data-ek="${esc(p)}" data-o="${esc(v)}">${esc(v)}</${tag}>`:''};
+function applyOp(doc,op){const D=doc.depts[op.t];if(!D)return false;
+  if(op.k==='set'){const ks=op.p.split('.'),l=ks.pop(),o=getP(D,ks.join('.'));if(o==null||typeof o[l]!=='string')return false;o[l]=op.v;return true}
+  if(op.k==='ins'){const a=getP(D,op.p);if(!Array.isArray(a))return false;op.i=Math.min(op.i,a.length);a.splice(op.i,0,structuredClone(op.val));return true}
+  if(op.k==='del'){const a=getP(D,op.p);if(!Array.isArray(a)||!same(a[op.i],op.val))return false;a.splice(op.i,1);return true}
+  if(op.k==='mv'){const a=getP(D,op.from),b=getP(D,op.to);if(!Array.isArray(a)||!Array.isArray(b)||a===b||!same(a[op.fi],op.val))return false;a.splice(op.fi,1);op.ti=Math.min(op.ti,b.length);b.splice(op.ti,0,structuredClone(op.val));return true}
+  return false}
+const inverse=op=>op.k==='set'?{k:'set',t:op.t,p:op.p,o:op.v,v:op.o}:op.k==='ins'?{k:'del',t:op.t,p:op.p,i:op.i,val:op.val}:op.k==='del'?{k:'ins',t:op.t,p:op.p,i:op.i,val:op.val}:{k:'mv',t:op.t,from:op.to,fi:op.ti,to:op.from,ti:op.fi,val:op.val};
+function doOp(op,after){op.a=USER;op.ts=Date.now();op.id=op.ts.toString(36)+Math.random().toString(36).slice(2,7);
+  if(!applyOp(DOC,op))return false;DOC.log.push(op);PEND.push(op);refresh();if(after)after();if($('#edl').open)drawLog();persist();return true}
 
 /* ---------- подсчёт объёма ---------- */
 const cItem=it=>typeof it==='string'?1:it.sub?it.sub.length:1;
@@ -317,8 +341,7 @@ const person=(t,i)=>`<div>${E(t,`people.${i}.0`,'span','r')}${E(t,`people.${i}.1
 const LEG=`<div class="box legend" aria-label="Обозначения">
   <div><i class="m"></i><span>Этап работы</span></div>
   <div><i class="s"></i><span>Направление или пункт — нажмите, чтобы открыть подробности</span></div>
-  <div><i class="x"></i><span>Выход с любой стадии, перерывы в расписании</span></div>
-  <div><i class="k">4</i><span>Сколько действий или задач внутри</span></div></div>`;
+  <div><i class="x"></i><span>Выход с любой стадии, перерывы в расписании</span></div></div>`;
 
 function renderDept(t){
   const D=DD[t];document.title='Карта работы · '+ABBR[t];
@@ -331,28 +354,29 @@ function renderDept(t){
     if(p.days)R=p.days.map((d,j)=>j);
     else{const fl=p.b.map((b,j)=>j).filter(j=>p.b[j].flow),rest=p.b.map((b,j)=>j).filter(j=>!p.b[j].flow);if(fl.length){R=fl;L=rest}else rest.forEach((j,k)=>(k%2?R:L).push(j))}
     const node=j=>{
-      if(p.days){const d=p.days[j];return d.t.trim()?`<button class="n" type="button" data-id="y${i}-${j}">${esc(d.t)}<span class="c">${cDay(d)}</span></button>`:''}
+      if(p.days){const d=p.days[j];return d.t.trim()?`<button class="n" type="button" data-id="y${i}-${j}">${esc(d.t)}</button>`:''}
       const b=p.b[j];if(!b.t.trim())return '';
-      const head=`<button class="n" type="button" data-id="b${i}-${j}">${esc(b.t)}<span class="c">${cBlock(D,b)}</span></button>`;
+      const head=`<button class="n" type="button" data-id="b${i}-${j}">${esc(b.t)}</button>`;
       return b.flow?head+`<div class="steps">${(D.FLOW||[]).map((s,x)=>`<button class="n st" type="button" data-id="s${x}"><b>${x+1}</b>${esc(s.t)}</button>`).join('')}<button class="n st ex" type="button" data-id="x">Отказ, самоотказ и другие выходы</button></div>`:head};
-    return `<section class="row" aria-label="${esc(p.t)}"><div class="col l">${L.map(node).join('')}</div>
-      <button class="n main" type="button" data-id="p${i}">${esc(p.t)}</button><div class="col r">${R.map(node).join('')}</div></section>`}).join('');
+    const addN=p.days||RO?'':`<button class="n addn" type="button" data-addb="${i}">${ic('plus')} Добавить блок</button>`,toL=L.length<=R.length;
+    return `<section class="row" aria-label="${esc(p.t)}"><div class="col l">${L.map(node).join('')}${toL?addN:''}</div>
+      <button class="n main" type="button" data-id="p${i}">${esc(p.t)}</button><div class="col r">${R.map(node).join('')}${toL?'':addN}</div></section>`}).join('');
 }
 
 function renderAll(){
   document.title='Объём работы лидерской программы';
   const tot=DEP.map(t=>({t,D:DD[t],T:total(DD[t]),B:nDir(DD[t]),S:DD[t].P.length}));
   const sum=f=>tot.reduce((s,x)=>s+x[f],0),nRows=DD.oo.P.reduce((s,p)=>s+nRowsOf(p),0);
-  $('#top').innerHTML=`<div class="box legend" aria-label="Обозначения"><div><i class="m"></i><span>Отдел — нажмите, чтобы увидеть его этапы</span></div><div><i class="s"></i><span>Этап отдела — откроет его на карте отдела</span></div><div><i class="k">9</i><span>Сколько действий или задач внутри</span></div></div>
+  $('#top').innerHTML=`<div class="box legend" aria-label="Обозначения"><div><i class="m"></i><span>Отдел — нажмите, чтобы увидеть его этапы</span></div><div><i class="s"></i><span>Этап отдела — откроет его на карте отдела</span></div></div>
     <div class="box who"><div>${E('oo','people.0.0','span','r')}${E('oo','people.0.1','span','nm')}${E('oo','people.0.2','span','ps')}</div>${DEP.map(t=>person(t,1)).join('')}
     <div class="tot"><b>3</b><span>отдела</span><b>${sum('S')}</b><span>этапов работы</span><b>${sum('B')}</b><span>направлений</span><b>${nRows}</b><span>пунктов расписания программы</span><b>${sum('T')}</b><span>действий и задач</span></div></div>`;
   $('#intro').innerHTML='<p>Совокупный объём работы трёх отделов лидерской программы. Подробная карта каждого отдела — во вкладках ОП, ОО и ОТиС.</p>';
   $('#ttl').innerHTML='<span>Лидерская программа «100 Лидеров»</span>';
   NODES=[];tot.forEach(({t,D})=>{NODES.push({k:'d',t});D.P.forEach((p,i)=>NODES.push({k:'g',t,i}))});
   $('#rows').innerHTML=tot.map(({t,D})=>{const L=[],R=[],hasDay=D.P.some(p=>p.days);D.P.forEach((p,i)=>(hasDay?(p.days?R:L):(i%2?R:L)).push(i));
-    const node=i=>{const p=D.P[i],n=cPhase(D,p);return p.t.trim()?`<button class="n" type="button" data-id="g-${t}-${i}">${esc(p.t)}<span class="c">${n}</span></button>`:''};
+    const node=i=>{const p=D.P[i],n=cPhase(D,p);return p.t.trim()?`<button class="n" type="button" data-id="g-${t}-${i}">${esc(p.t)}</button>`:''};
     return `<section class="row" aria-label="${esc(D.dept)}"><div class="col l">${L.map(node).join('')}</div>
-      <button class="n main" type="button" data-id="d-${t}">${esc(D.dept)}<span class="c">${total(D)}</span></button><div class="col r">${R.map(node).join('')}</div></section>`}).join('');
+      <button class="n main" type="button" data-id="d-${t}">${esc(D.dept)}</button><div class="col r">${R.map(node).join('')}</div></section>`}).join('');
 }
 
 /* провода: сплошная ось между главными узлами, пунктир к остальным */
@@ -364,7 +388,7 @@ function wires(){
   solid.push(`M${mains[0].cx} ${T.b-8}V${mains[0].t}`);
   for(let k=0;k<mains.length-1;k++){const a=mains[k],b=mains[k+1];solid.push(`M${a.cx} ${a.b}V${b.t}`)}
   $$('#rows .row').forEach((row,k)=>{const m=mains[k];
-    row.querySelectorAll('.col>.n').forEach(n=>{const s=r(n);
+    row.querySelectorAll('.col>.n:not(.addn)').forEach(n=>{const s=r(n);
       if(s.l>=m.r-1){const dx=(s.l-m.r)/2;dot.push(`M${m.r} ${m.cy}C${m.r+dx} ${m.cy} ${s.l-dx} ${s.cy} ${s.l} ${s.cy}`)}
       else if(s.r<=m.l+1){const dx=(m.l-s.r)/2;dot.push(`M${m.l} ${m.cy}C${m.l-dx} ${m.cy} ${s.r+dx} ${s.cy} ${s.r} ${s.cy}`)}
       else{const x=m.l+16;dot.push(`M${x} ${m.b}V${s.cy}H${s.l}`)}});
@@ -375,11 +399,13 @@ let rq=0;const rewire=()=>{cancelAnimationFrame(rq);rq=requestAnimationFrame(wir
 addEventListener('resize',rewire);if(document.fonts)document.fonts.ready.then(rewire);
 
 /* ---------- панель ---------- */
-function items(t,base,list){return `<ul class="list">${list.map((it,k)=>{const p=`${base}.${k}`;
-  if(typeof it==='string')return it.trim()?`<li>${ic('check')}<div>${E(t,p,'span','t r')}</div></li>`:'';
+const delB=(base,k)=>`<button class="del" type="button" data-del="${base}" data-i="${k}" aria-label="Удалить пункт" title="Удалить пункт">${ic('x')}</button>`;
+const addB=base=>`<button class="add" type="button" data-add="${base}">${ic('plus')}Добавить пункт</button>`;
+function items(t,base,list,ed){return `<ul class="list">${list.map((it,k)=>{const p=`${base}.${k}`,d=ed?delB(base,k):'';
+  if(typeof it==='string')return it.trim()?`<li>${ic('check')}<div>${E(t,p,'span','t r')}</div>${d}</li>`:'';
   const sub=it.sub?(it.chips?`<div class="chips">${it.sub.map((x,q)=>E(t,`${p}.sub.${q}`,'span','chip')).join('')}</div>`:`<ul class="sub">${it.sub.map((x,q)=>E(t,`${p}.sub.${q}`,'li')).join('')}</ul>`):'';
   const tt=it.t!=null?E(t,p+'.t','span',it.sub||it.d?'t':'t r'):'';
-  return (tt||sub||it.d)?`<li>${ic('check')}<div>${tt}${it.d!=null?E(t,p+'.d','span','d'):''}${sub}</div></li>`:''}).join('')}</ul>`}
+  return (tt||sub||it.d)?`<li>${ic('check')}<div>${tt}${it.d!=null?E(t,p+'.d','span','d'):''}${sub}</div>${d}</li>`:''}).join('')}</ul>${ed?addB(base):''}`}
 const go=(id,label,cnt,cls='')=>`<button class="go ${cls}" type="button" data-go="${id}">${label}${cnt!=null?`<b>${cnt}</b>`:''}</button>`;
 function body(n){
   if(n.k==='d'){const t=n.t,D=DD[t];
@@ -398,21 +424,23 @@ function body(n){
       ${p.days.map((d,j)=>`<h3>${esc(d.t)}</h3><div class="links">${d.day.map((r,q)=>rowBtn(n.i,j,q,r)).join('')}</div>`).join('')}`};
     const list=p.b.map((b,j)=>b.t.trim()?go(`b${n.i}-${j}`,esc(b.t),cBlock(D,b)):'').join('');
     return {crumb:`Этап ${n.i+1} из ${D.P.length}`,html:`<h2 id="pt">${E(t,`P.${n.i}.t`)}</h2><div class="meta"><span class="tag y">${p.b.length} ${plural(p.b.length,'направление','направления','направлений')}</span><span class="tag">${c} ${unit(p,c)}</span></div>
-      <h3>Направления этапа</h3><div class="links">${list}</div>`}}
+      <h3>Направления этапа</h3><div class="links">${list}</div><button class="add" type="button" data-addb="${n.i}">${ic('plus')}Добавить блок</button>`}}
   if(n.k==='y'){const p=D.P[n.i],d=p.days[n.j],c=cDay(d),m=d.day.reduce((x,r)=>x+r[4].length,0);
     return {crumb:`${p.t} · день ${n.j+1} из ${p.days.length}`,html:`<h2 id="pt">${E(t,`P.${n.i}.days.${n.j}.t`)}</h2><div class="meta"><span class="tag y">${d.day.length} ${plural(d.day.length,'пункт','пункта','пунктов')} расписания</span><span class="tag">${c} ${plural(c,'задача','задачи','задач')}</span><span class="tag">${m} МТО</span></div>
       <h3>Расписание дня</h3><div class="links">${d.day.map((r,q)=>rowBtn(n.i,n.j,q,r)).join('')}</div>`}}
   if(n.k==='b'){const p=D.P[n.i],b=p.b[n.j],c=cBlock(D,b),bp=`P.${n.i}.b.${n.j}`;
     const head=`<h2 id="pt">${E(t,bp+'.t')}</h2><div class="meta"><span class="tag y">${esc(p.t)}</span><span class="tag">${c} ${b.flow?plural(c,'стадия','стадии','стадий'):plural(c,'действие','действия','действий')}</span></div>`;
     if(b.flow)return {crumb:p.t,html:head+`<h3>Путь лида по стадиям</h3><div class="links">${D.FLOW.map((s,x)=>go(`s${x}`,`<span class="num">${x+1}</span>${esc(s.t)}`,null,'w')).join('')}${go('x','Отказ, самоотказ и другие выходы',null,'g')}</div>`};
-    return {crumb:p.t,html:head+items(t,bp+'.items',b.items)
+    const others=D.P.map((q,i2)=>q.b&&i2!==n.i?`<option value="${i2}">${esc(q.t)}</option>`:'').join('');
+    const tools=`<div class="btools"><label>Перенести в этап <select id="mvsel"><option value="">— выберите —</option>${others}</select></label><button class="rm" id="delb" type="button">Удалить блок</button></div>`;
+    return {crumb:p.t,html:head+items(t,bp+'.items',b.items,true)
       +(b.contacts?`<h3>Контакты подразделений</h3><ul class="list">${b.contacts.map((x,k)=>`<li>${ic('check')}<div>${E(t,`${bp}.contacts.${k}.0`,'span','t')}${x[1]?E(t,`${bp}.contacts.${k}.1`,'span','d'):''}</div></li>`).join('')}</ul>`:'')
-      +(b.note!=null?E(t,bp+'.note','span','note'):'')}}
+      +(b.note!=null?E(t,bp+'.note','span','note'):'')+tools}}
   if(n.k==='r'){const d=D.P[n.i].days[n.j],r=d.day[n.q],rp=`P.${n.i}.days.${n.j}.day.${n.q}`;
     return {crumb:`${d.t} · пункт ${n.q+1} из ${d.day.length}`,html:`<h2 id="pt">${E(t,rp+'.1')}</h2><div class="meta"><span class="tag y">${E(t,rp+'.0')}</span>${r[2]?`<span class="tag">${E(t,rp+'.2')}</span>`:''}</div>
-      ${r[3].length?`<h3>Задачи</h3>${items(t,rp+'.3',r[3])}`:''}
+      <h3>Задачи</h3>${items(t,rp+'.3',r[3],true)}
       ${r[4].length?`<h3>МТО</h3><div class="chips">${r[4].map((x,k)=>E(t,`${rp}.4.${k}`,'span','chip w')).join('')}</div>`:''}
-      ${r[5]?E(t,rp+'.5','span','note'):''}${!r[3].length&&!r[4].length&&!r[5]?'<p class="lead" style="color:var(--muted)">Без задач отдела в этом пункте расписания.</p>':''}`}}
+      ${r[5]?E(t,rp+'.5','span','note'):''}`}}
   if(n.k==='s'){const s=D.FLOW[n.x],sp=`FLOW.${n.x}`;
     return {crumb:`Обработка лида · стадия ${n.x+1} из ${D.FLOW.length}`,html:`<h2 id="pt">${E(t,sp+'.t')}</h2><div class="meta">${s.w?`<span class="tag y">${E(t,sp+'.w')}</span>`:''}</div>
       <p class="lead">${E(t,sp+'.d')}</p>${s.note!=null?E(t,sp+'.note','span','note'):''}
@@ -434,12 +462,23 @@ function openNode(id,keep){
   $('#pprev span').textContent=k>0?nameOf(NODES[k-1]):'Назад';$('#pnext span').textContent=k<NODES.length-1?nameOf(NODES[k+1]):'Дальше';
   $$('#pb [data-go]').forEach(b=>b.onclick=()=>openNode(b.dataset.go));
   $$('#pb [data-tab]').forEach(b=>b.onclick=()=>setTab(b.dataset.tab,b.dataset.open));
+  if(!RO&&TAB!=='all'){const t=TAB;
+    $$('#pb [data-add]').forEach(b=>b.onclick=()=>{const base=b.dataset.add,a=getP(DD[t],base),i=a.length;doOp({k:'ins',t,p:base,i,val:'Новый пункт'},()=>{const el=$(`#pb [data-ek="${CSS.escape(base+'.'+i)}"]`);if(el)startEdit(el)})});
+    $$('#pb [data-del]').forEach(b=>b.onclick=()=>{const base=b.dataset.del,i=+b.dataset.i;doOp({k:'del',t,p:base,i,val:structuredClone(getP(DD[t],base)[i])})});
+    $$('#pb [data-addb]').forEach(b=>b.onclick=()=>addBlock(+b.dataset.addb));
+    const n=NODES[k];
+    if(n.k==='b'){const mv=$('#mvsel'),db=$('#delb'),from=`P.${n.i}.b`;
+      if(mv)mv.onchange=()=>{if(mv.value==='')return;const i2=+mv.value,to=`P.${i2}.b`,ti=getP(DD[t],to).length;doOp({k:'mv',t,from,fi:n.j,to,ti,val:structuredClone(DD[t].P[n.i].b[n.j])},()=>openNode(`b${i2}-${ti}`))};
+      if(db)db.onclick=()=>{if(!db.classList.contains('sure')){db.classList.add('sure');db.textContent='Точно удалить? Нажмите ещё раз';return}
+        const pid=`p${n.i}`;doOp({k:'del',t,p:from,i:n.j,val:structuredClone(DD[t].P[n.i].b[n.j])},()=>openNode(pid))}}}
   if(!document.body.classList.contains('open')){lastFocus=document.activeElement;document.body.classList.add('open');$('#pn').setAttribute('aria-hidden','false')}
   if(!keep){$('#px').focus({preventScroll:true});
     if(el){const b=el.getBoundingClientRect();if(b.top<70||b.bottom>innerHeight-20)el.scrollIntoView({block:'center',behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth'})}}
 }
 function closePanel(silent){document.body.classList.remove('open');$('#pn').setAttribute('aria-hidden','true');$$('.n.on').forEach(e=>e.classList.remove('on'));curId=null;pen.classList.remove('on');if(!silent&&lastFocus)lastFocus.focus({preventScroll:true})}
-$('#rows').addEventListener('click',e=>{const n=e.target.closest('.n');if(n)openNode(n.dataset.id)});
+$('#rows').addEventListener('click',e=>{const a=e.target.closest('[data-addb]');if(a){addBlock(+a.dataset.addb);return}const n=e.target.closest('.n');if(n&&n.dataset.id)openNode(n.dataset.id)});
+function addBlock(i){if(RO)return;const t=TAB,p=`P.${i}.b`,j=getP(DD[t],p).length;
+  doOp({k:'ins',t,p,i:j,val:{t:'Новый блок',items:[]}},()=>{openNode(`b${i}-${j}`);const el=$('#pt span');if(el)startEdit(el)})}
 $('#px').onclick=()=>closePanel();$('#scrim').onclick=()=>closePanel();
 $('#pprev').onclick=()=>cur>0&&openNode(idOf(NODES[cur-1]));$('#pnext').onclick=()=>cur<NODES.length-1&&openNode(idOf(NODES[cur+1]));
 document.addEventListener('keydown',e=>{if(editing||!document.body.classList.contains('open')||$('#edl').open)return;
@@ -464,29 +503,34 @@ function startEdit(el){
   const kd=e=>{e.stopPropagation();if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();el.blur()}else if(e.key==='Escape'){e.preventDefault();done(false)}};
   const bl=()=>done(true);el.addEventListener('keydown',kd);el.addEventListener('blur',bl);
 }
-async function setEdit(t,k,v,o){
-  (ED[t]=ED[t]||{})[k]=v===o?{reset:1,a:USER,ts:Date.now()}:{v,o,a:USER,ts:Date.now()};
-  refresh();if($('#edl').open)drawLog();await persist();
+function setEdit(t,k,v,o){
+  const ks=k.split('.'),l=ks.pop(),par=getP(DD[t],ks.join('.'));
+  if(v===''&&Array.isArray(par)&&/^(P\.\d+\.b\.\d+\.items|P\.\d+\.days\.\d+\.day\.\d+\.3)$/.test(ks.join('.')))return doOp({k:'del',t,p:ks.join('.'),i:+l,val:par[+l]});
+  doOp({k:'set',t,p:k,o,v});
 }
 function refresh(){const id=curId,open=document.body.classList.contains('open');render();if(open&&id)openNode(id,true)}
 
 /* ---------- журнал правок ---------- */
-const allLive=()=>DEP.flatMap(t=>live(t).map(([k,e])=>({t,k,e}))).sort((a,b)=>b.e.ts-a.e.ts);
-function paintChg(){$('#chg').innerHTML=`${ic('hist')}Правки <b>${allLive().length}</b>`}
+const canRevert=op=>{if(op.hist||op.rev||DOC.log.some(x=>x.rev===op.id))return false;if(op.k==='set')return getP(DOC.depts[op.t],op.p)===op.v;return applyOp(structuredClone(DOC),inverse(op))};
+const label=v=>typeof v==='string'?v:v&&v.t!=null?v.t:'';
+function paintChg(){$('#chg').innerHTML=`${ic('hist')}Правки <b>${DOC?DOC.log.length:0}</b>`}
 function drawLog(){
-  const L=allLive();
-  $('#edb').innerHTML=L.length?L.map(({t,k,e})=>`<div class="er"><span class="w">${ABBR[t]} · ${esc(e.a)} · ${new Date(e.ts).toLocaleString('ru-RU',{dateStyle:'short',timeStyle:'short'})}</span><span class="o">${esc(e.o||'')}</span><span class="nv${e.v?'':' e'}">${e.v?esc(e.v):'Скрыто (текст удалён)'}</span><button type="button" data-t="${t}" data-k="${esc(k)}">Вернуть</button></div>`).join('')
+  const L=DOC.log.slice(-300).reverse();
+  $('#edb').innerHTML=L.length?L.map(op=>{const w=`${ABBR[op.t]} · ${esc(op.a||'')} · ${new Date(op.ts).toLocaleString('ru-RU',{dateStyle:'short',timeStyle:'short'})}${op.rev?' · возврат':''}`;
+    const body=op.k==='set'?`<span class="o">${esc(op.o||'')}</span><span class="nv${op.v?'':' e'}">${op.v?esc(op.v):'Скрыто (текст удалён)'}</span>`
+      :op.k==='ins'?`<span class="nv add-t">Добавлено: ${esc(label(op.val))}</span>`:op.k==='del'?`<span class="nv e">Удалено: ${esc(label(op.val))}</span>`
+      :`<span class="nv">Перенесён блок «${esc(label(op.val))}» в этап «${esc(getP(DD[op.t],op.to.replace(/\.b$/,'.t'))||'')}»</span>`;
+    const ok=canRevert(op);return `<div class="er"><span class="w">${w}</span>${body}<button type="button" data-id="${op.id||''}" ${ok?'':'disabled title="Эту правку нельзя вернуть автоматически"'}>Вернуть</button></div>`}).join('')
     :'<p class="none">Правок пока нет. Откройте любой блок на карте, наведите на текст в панели справа и нажмите на карандаш.</p>';
-  $$('#edb [data-k]').forEach(b=>b.onclick=()=>{const e=ED[b.dataset.t][b.dataset.k];setEdit(b.dataset.t,b.dataset.k,e.o,e.o)});
+  $$('#edb [data-id]').forEach(b=>b.onclick=()=>{const op=DOC.log.find(x=>x.id===b.dataset.id);if(op&&canRevert(op)){const inv=inverse(op);inv.rev=op.id;doOp(inv)}});
 }
 $('#chg').onclick=()=>{drawLog();$('#edl').showModal()};
 $('#edlx').onclick=()=>$('#edl').close();
 $('#edl').addEventListener('click',e=>{if(e.target===$('#edl'))$('#edl').close()});
 
 /* ---------- хранение: браузер + зашифрованный файл в репозитории ---------- */
-const mergeE=(a,b)=>{const out={};for(const t of DEP){out[t]={...(a&&a[t]||{})};for(const [k,v] of Object.entries(b&&b[t]||{}))if(!out[t][k]||v.ts>out[t][k].ts)out[t][k]=v}return out};
-async function readLocal(){const s=ls.g('vol.e');if(!s)return {};try{return await decJSON(JSON.parse(s))}catch(e){return {}}}
-const saveLocal=async()=>ls.s('vol.e',JSON.stringify(await encJSON(ED)));
+async function readLocal(){const s=ls.g('vol.d');if(!s)return null;try{return await decJSON(JSON.parse(s))}catch(e){return null}}
+const saveLocal=async()=>ls.s('vol.d',JSON.stringify(await encJSON({doc:DOC,pend:PEND})));
 function syncSt(t,c){const e=$('#sync');e.className='sync '+(c||'');e.querySelector('span').textContent=t}
 // запасной путь к GitHub API через Cloudflare Worker на своём домене (xolchade.dev/gh/…).
 // Переключаемся на него, только если прямой запрос не дошёл и прокси действительно ответил от GitHub.
@@ -502,21 +546,24 @@ function syncSt(t,c){const e=$('#sync');e.className='sync '+(c||'');e.querySelec
     catch(e){clearTimeout(t);if(!can)throw e;const r=await viaProxy(u,o);via=true;ss.s('vol.ghvia','1');return r}
   };
 })();
-const api=()=>`https://api.github.com/repos/${SYNC.repo}/contents/${SYNC.path}`;
+const api=()=>`https://api.github.com/repos/${SYNC.repo}/contents/${SYNC.path.replace(/[^/]+$/,'doc.enc.json')}`;
 const hdr=()=>({Authorization:'Bearer '+SYNC.token,Accept:'application/vnd.github+json'});
 async function ghGet(){
   const r=await fetch(api()+'?t='+Date.now(),{headers:hdr(),cache:'no-store'});
-  if(r.status===404&&r.headers.get('x-github-request-id'))return {sha:null,data:{}};
+  if(r.status===404&&r.headers.get('x-github-request-id'))return {sha:null,data:null};
   if(!r.ok)throw new Error(r.status===401?'токен GitHub недействителен или истёк':'GitHub '+r.status);
   const j=await r.json();return {sha:j.sha,data:await decJSON(JSON.parse(dec.decode(ub64(j.content.replace(/\n/g,'')))))};
 }
+const fresh=()=>({depts:structuredClone(RAW.depts),log:[]});
+function rebase(server){const base=server||fresh();if(!base.log)base.log=[];const ids=new Set(base.log.map(x=>x.id));
+  for(const op of PEND)if(!ids.has(op.id)&&applyOp(base,op))base.log.push(op);if(base.log.length>1500)base.log=base.log.slice(-1500);return base}
 async function syncPull(){
-  if(RO){try{const d=await decJSON(await getJSON('edits.enc.json'));const before=JSON.stringify(ED);ED=mergeE(d,ED);if(JSON.stringify(ED)!==before)refresh()}catch(e){}syncSt('Только просмотр','');return}
+  if(RO){try{const d=await decJSON(await getJSON('doc.enc.json'));if(!same(d,DOC)){DOC=d;refresh()}}catch(e){}syncSt('Только просмотр','');return}
   if(!SYNC){try{const o=await getJSON('sync.enc.json');SYNC=JSON.parse(dec.decode(await aesDec(SKEY,o.iv,o.ct)))}catch(e){SYNC=null}}
   if(!SYNC){syncSt('Только в этом браузере','bad');return}
-  try{syncSt('Синхронизация…','busy');const {data}=await ghGet();const before=JSON.stringify(mergeE(ED,{}));ED=mergeE(data,ED);await saveLocal();
-    if(JSON.stringify(mergeE(data,{}))!==JSON.stringify(ED))await syncPush();else syncSt('Сохранено на сервере','ok');
-    if(JSON.stringify(ED)!==before&&!editing)refresh()}
+  try{syncSt('Синхронизация…','busy');const {data}=await ghGet();const next=rebase(data),changed=!same(next,DOC);DOC=next;await saveLocal();
+    if(PEND.length||!data)await syncPush();else syncSt('Сохранено на сервере','ok');
+    if(changed&&!editing)refresh()}
   catch(e){syncSt('Сервер недоступен: '+(e.name==='TypeError'?'нет связи с GitHub':e.message),'bad')}
 }
 let pushing=null;
@@ -525,12 +572,12 @@ async function syncPush(){
   for(let i=0;i<3;i++){
     try{
       syncSt('Сохраняю…','busy');
-      const {sha,data}=await ghGet();ED=mergeE(data,ED);
-      const body={message:'volume: edits update',content:b64(enc.encode(JSON.stringify(await encJSON(ED))))};if(sha)body.sha=sha;
+      const {sha,data}=await ghGet();const next=rebase(data),sent=PEND.length;
+      const body={message:'volume: правки',content:b64(enc.encode(JSON.stringify(await encJSON(next))))};if(sha)body.sha=sha;
       const r=await fetch(api(),{method:'PUT',headers:{...hdr(),'Content-Type':'application/json'},body:JSON.stringify(body)});
       if(r.status===409||r.status===422){await new Promise(z=>setTimeout(z,600*(i+1)));continue}
       if(!r.ok)throw new Error(r.status===401?'токен GitHub недействителен или истёк':'GitHub '+r.status);
-      await saveLocal();clearTimeout(retryT);retryN=0;syncSt('Сохранено на сервере','ok');return;
+      PEND=PEND.slice(sent);DOC=PEND.length?rebase(next):next;await saveLocal();clearTimeout(retryT);retryN=0;syncSt('Сохранено на сервере','ok');if(!editing)refresh();return;
     }catch(e){
       const why=e.name==='TypeError'?'нет связи с GitHub':e.message;
       if(retryN<5){retryN++;clearTimeout(retryT);retryT=setTimeout(()=>persist(),15000*retryN);syncSt(`Не сохранено: ${why}. Повторю автоматически`,'bad')}
