@@ -80,6 +80,11 @@ body.ro #chg,body.ro .pen{display:none!important}
 .kp{display:flex;flex-wrap:wrap;gap:14px 34px;margin-top:30px}
 .kp b{display:block;font:700 34px/1 var(--fh);color:#fff;font-variant-numeric:tabular-nums}
 .kp span{display:block;margin-top:6px;font-size:14px;color:rgba(255,255,255,.82);max-width:16ch;line-height:1.3}
+.staff{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 18px;margin-top:-2px;padding:10px 14px;border-radius:16px;background:var(--tint)}
+.staff .sl{flex:1 0 100%;font-size:13px;color:var(--muted2)}
+.staff div{display:flex;align-items:baseline;gap:6px}
+.staff div span{font-size:13px;color:var(--muted)}
+.staff b{font:700 18px/1.1 var(--fh);color:var(--blue);font-variant-numeric:tabular-nums}
 .tot{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin-top:4px;padding-top:14px;border-top:1px solid var(--line)}
 .tot b{font:700 20px/1.1 var(--fh);color:var(--blue);text-align:right;font-variant-numeric:tabular-nums}
 .tot span{color:var(--muted);align-self:center;font-size:14px}
@@ -371,12 +376,14 @@ function render(){
   paintChg();rewire();
 }
 function setTab(t,open){if(t!==TAB){TAB=t;ss.s('vol.tab',t);closePanel(true);render();scrollTo({top:0})}if(open)openNode(open)}
+const staffE=(t,lab)=>DD[t].staff?`<div class="staff">${lab?`<span class="sl">${esc(lab)}</span>`:''}<div><span>Факт</span>${E(t,'staff.fact','b')}</div><div><span>Потребность</span>${E(t,'staff.need','b')}</div></div>`:'';
+const num=v=>/^\d+$/.test((v||'').trim())?+v:null;
 const person=(t,i)=>`<div>${E(t,`people.${i}.0`,'span','r')}${E(t,`people.${i}.1`,'span','nm')}${E(t,`people.${i}.2`,'span','ps')}</div>`;
 const LEG=`<div><i class="m"></i><span>Этап работы</span></div><div><i class="s"></i><span>Направление или пункт — нажмите, чтобы открыть подробности</span></div><div><i class="x"></i><span>Выход с любой стадии, перерывы в расписании</span></div>`;
 
 function renderDept(t){
   const D=DD[t];document.title='Карта работы · '+ABBR[t];
-  $('#legend').innerHTML=LEG;$('#top').innerHTML=`<div class="who">${D.people.map((p,i)=>person(t,i)).join('')}</div>`;
+  $('#legend').innerHTML=LEG;$('#top').innerHTML=`<div class="who">${D.people.map((p,i)=>person(t,i)).join('')}${staffE(t,'Сотрудники отдела')}</div>`;
   $('#intro').innerHTML=`<p>${E(t,'lead')}</p>`;
   $('#ttl').innerHTML=E(t,'dept');
   NODES=nodesOf(t);
@@ -399,9 +406,9 @@ function renderAll(){
   const tot=DEP.map(t=>({t,D:DD[t],T:total(DD[t]),B:nDir(DD[t]),S:DD[t].P.length}));
   const sum=f=>tot.reduce((s,x)=>s+x[f],0),nRows=DD.oo.P.reduce((s,p)=>s+nRowsOf(p),0);
   $('#legend').innerHTML='<div><i class="m"></i><span>Отдел — нажмите, чтобы увидеть его этапы</span></div><div><i class="s"></i><span>Этап отдела — откроет его на карте отдела</span></div>';
-  $('#top').innerHTML=`<div class="who"><div>${E('oo','people.0.0','span','r')}${E('oo','people.0.1','span','nm')}${E('oo','people.0.2','span','ps')}</div>${DEP.map(t=>person(t,1)).join('')}
+  $('#top').innerHTML=`<div class="who"><div>${E('oo','people.0.0','span','r')}${E('oo','people.0.1','span','nm')}${E('oo','people.0.2','span','ps')}</div>${DEP.map(t=>person(t,1)+staffE(t,'')).join('')}
     </div>`;
-  $('#intro').innerHTML=`<p>Совокупный объём работы трёх отделов лидерской программы. Подробная карта каждого отдела — во вкладках ОП, ОО и ОТиС.</p><div class="kp"><div><b>3</b><span>отдела</span></div><div><b>${sum('S')}</b><span>этапов работы</span></div><div><b>${sum('B')}</b><span>направлений</span></div><div><b>${nRows}</b><span>пунктов расписания программы</span></div><div><b>${sum('T')}</b><span>действий и задач</span></div></div>`;
+  $('#intro').innerHTML=`<p>Совокупный объём работы трёх отделов лидерской программы. Подробная карта каждого отдела — во вкладках ОП, ОО и ОТиС.</p><div class="kp"><div><b>3</b><span>отдела</span></div><div><b>${sum('S')}</b><span>этапов работы</span></div><div><b>${sum('B')}</b><span>направлений</span></div><div><b>${nRows}</b><span>пунктов расписания программы</span></div><div><b>${sum('T')}</b><span>действий и задач</span></div>${(()=>{const f=DEP.map(t=>num(DD[t].staff&&DD[t].staff.fact)),n=DEP.map(t=>num(DD[t].staff&&DD[t].staff.need));return f.every(x=>x!=null)&&n.every(x=>x!=null)?`<div><b>${f.reduce((a,b)=>a+b,0)} / ${n.reduce((a,b)=>a+b,0)}</b><span>сотрудников: факт / потребность</span></div>`:''})()}</div>`;
   $('#ttl').textContent='Лидерская программа «100 Лидеров»';
   NODES=[];tot.forEach(({t,D})=>{NODES.push({k:'d',t});D.P.forEach((p,i)=>NODES.push({k:'g',t,i}))});
   $('#rows').innerHTML=tot.map(({t,D})=>{const L=[],R=[],hasDay=D.P.some(p=>p.days);D.P.forEach((p,i)=>(hasDay?(p.days?R:L):(i%2?R:L)).push(i));
@@ -553,7 +560,7 @@ function drawLog(){
   const L=DOC.log.slice(-300).reverse();
   $('#edb').innerHTML=L.length?L.map(op=>{const w=`${ABBR[op.t]} · ${esc(op.a||'')} · ${new Date(op.ts).toLocaleString('ru-RU',{dateStyle:'short',timeStyle:'short'})}${op.rev?' · возврат':''}`;
     const body=op.k==='set'?`<span class="o">${esc(op.o||'')}</span><span class="nv${op.v?'':' e'}">${op.v?esc(op.v):'Скрыто (текст удалён)'}</span>`
-      :op.k==='rep'?`<span class="nv add-t">Добавлен подпункт: ${esc(label(op.v)||'')} → ${esc((op.v.sub||[]).slice(-1)[0]||'')}</span>`
+      :op.k==='rep'?(op.note?`<span class="nv add-t">${esc(op.note)}: ${esc(Array.isArray(op.v)?(op.v[0]+' '+op.v[1]):label(op.v))}</span>`:`<span class="nv add-t">Добавлен подпункт: ${esc(label(op.v)||'')} → ${esc((op.v.sub||[]).slice(-1)[0]||'')}</span>`)
       :op.k==='ins'?`<span class="nv add-t">Добавлено: ${esc(label(op.val))}</span>`:op.k==='del'?`<span class="nv e">Удалено: ${esc(label(op.val))}</span>`
       :`<span class="nv">Перенесён блок «${esc(label(op.val))}» в этап «${esc(getP(DD[op.t],op.to.replace(/\.b$/,'.t'))||'')}»</span>`;
     const ok=canRevert(op);return `<div class="er"><span class="w">${w}</span>${body}<button type="button" data-id="${op.id||''}" ${ok?'':'disabled title="Эту правку нельзя вернуть автоматически"'}>Вернуть</button></div>`}).join('')
