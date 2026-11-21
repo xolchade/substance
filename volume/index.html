@@ -214,6 +214,68 @@ dialog.edl::backdrop{background:rgba(13,19,29,.45)}
 .er button:disabled{opacity:.35;cursor:default}
 .edb .none{padding:22px 0;color:var(--muted)}
 
+
+/* ================= анимации ================= */
+:root{--ease:cubic-bezier(.2,.7,.2,1);--ease-pop:cubic-bezier(.2,.8,.2,1)}
+@keyframes rise{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:none}}
+@keyframes vuIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes popIn{from{opacity:0;transform:scale(.86)}to{opacity:1;transform:none}}
+@keyframes fromL{from{opacity:0;transform:translateX(28px)}to{opacity:1;transform:none}}
+@keyframes fromR{from{opacity:0;transform:translateX(-28px)}to{opacity:1;transform:none}}
+@keyframes draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
+@keyframes lnIn{from{opacity:0}to{opacity:1}}
+@keyframes drift{from{background-position:15px 15px}to{background-position:75px 45px}}
+@keyframes float{from{transform:translate3d(0,0,0) scale(1)}to{transform:translate3d(-18px,-26px,0) scale(1.04)}}
+@keyframes ring{0%{box-shadow:0 0 0 0 rgba(255,255,255,.45)}100%{box-shadow:0 0 0 16px rgba(255,255,255,0)}}
+.progress{position:fixed;left:0;top:0;height:3px;width:0;z-index:30;background:linear-gradient(90deg,var(--lime),#fff);transition:width .15s linear;pointer-events:none}
+.hero{position:relative;overflow:hidden;animation:drift 26s ease-in-out infinite alternate}
+.hero-in{position:relative;z-index:1}
+.orb{position:absolute;border-radius:50%;pointer-events:none;z-index:0;will-change:transform}
+.orb>i{display:block;width:100%;height:100%;border-radius:50%;animation:float 9s ease-in-out infinite alternate}
+.orb.o1{width:420px;height:420px;right:-120px;top:-160px}.orb.o1>i{background:radial-gradient(circle at 35% 35%,rgba(255,255,255,.16),rgba(255,255,255,.03) 70%)}
+.orb.o2{width:180px;height:180px;right:30%;bottom:-90px}.orb.o2>i{background:rgba(255,255,255,.07);animation-duration:7s;animation-delay:-3s}
+.orb.o3{width:54px;height:54px;right:calc(max(24px,(100% - 1280px) / 2 + 24px) + 410px);top:58px}
+@media (min-width:981px){.hero h1{font-size:clamp(22px,min(3.4vw + 8px,7.4vw - 36px),44px)}}
+@media (max-width:1180px){.orb.o3{display:none}}
+@media (max-width:980px){.orb.o3{right:24px;top:auto;bottom:24px;width:40px;height:40px}.orb.o1{width:260px;height:260px;right:-110px;top:-120px}}.orb.o3>i{background:var(--lime);opacity:.85;animation-duration:6s;animation-delay:-1s}
+body.enter .hero h1,body.enter .hero .intro p,body.enter .kp>div,body.enter .who,body.enter .legend>div{animation:rise .75s var(--ease) both;animation-delay:calc(var(--i,0) * 80ms + 60ms)}
+.who>div,.who>.staff{transition:background-color .2s}
+/* карта: строки появляются при прокрутке */
+.row.rv .n.main{opacity:0}
+.row.rv .col>.n,.row.rv .steps>.n{opacity:0}
+.row.in .n.main{animation:popIn .55s var(--ease-pop) both}
+.row.in .col.l>.n{animation:fromL .6s var(--ease) both;animation-delay:calc(var(--i,0) * 60ms + 180ms)}
+.row.in .col.r>.n,.row.in .steps>.n{animation:fromR .6s var(--ease) both;animation-delay:calc(var(--i,0) * 60ms + 180ms)}
+.row.done .n{animation:none!important;opacity:1!important}
+svg.wires .wg{opacity:0}
+svg.wires .wg.in{opacity:1}
+svg.wires .wg.in .sp{stroke-dasharray:1;stroke-dashoffset:1;animation:draw .7s var(--ease) both}
+svg.wires .wg.in .dp{animation:lnIn .6s .45s both}
+svg.wires .wg.done .sp,svg.wires .wg.done .dp{animation:none;stroke-dasharray:none}
+svg.wires .wg.done .dp{stroke-dasharray:1 6}
+/* живые реакции */
+.n{transition:background-color .2s,box-shadow .25s}
+.n:hover{box-shadow:0 10px 24px rgba(40,58,150,.16)}
+.n.main:hover{box-shadow:0 12px 28px rgba(40,58,150,.32)}
+.n.on.main{animation:ring 1.4s ease-out infinite}
+.tab{transition:background-color .2s,color .2s,border-color .2s,transform .2s}
+.tab:active{transform:scale(.96)}
+.go,.add,.pf button,.tb,.btn,.gbtn{transition:background-color .2s,box-shadow .2s,transform .2s}
+.go:hover{box-shadow:0 8px 20px rgba(40,58,150,.14)}
+.go:active,.btn:active,.pf button:active{transform:scale(.98)}
+/* панель: содержимое въезжает по очереди */
+body.open .pb.anim>*{animation:vuIn .4s var(--ease) both;animation-delay:calc(var(--i,0) * 45ms + 80ms)}
+body.open .pb.anim .links>.go,body.open .pb.anim .list>li{animation:vuIn .35s var(--ease) both;animation-delay:calc(var(--j,0) * 30ms + 160ms)}
+.scrim{-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+/* вход */
+.login .logo{animation:popIn .8s var(--ease-pop) both}
+.login .lbox{animation:rise .8s .15s var(--ease) both}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  .row.rv .n,svg.wires .wg{opacity:1!important}
+  svg.wires .wg .dp{stroke-dasharray:1 6!important}
+}
+
 @media (max-width:980px){
   .hero-in{grid-template-columns:1fr;padding:32px 20px 36px}
 }
@@ -249,6 +311,7 @@ dialog.edl::backdrop{background:rgba(13,19,29,.45)}
   </form>
 </div>
 
+<div class="progress" id="progress" aria-hidden="true"></div>
 <div class="hidden" id="app">
   <header class="bar"><div class="bar-in">
     <span class="brand"><span class="logo" role="img" aria-label="100 Лидеров"></span><span>Объём работы</span></span>
@@ -257,7 +320,7 @@ dialog.edl::backdrop{background:rgba(13,19,29,.45)}
       <button class="tb" id="chg" type="button"></button>
       <button class="tb" id="logout" type="button" aria-label="Выйти"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg><span>Выйти</span></button></div>
   </div></header>
-  <section class="hero dots"><div class="hero-in"><div><h1 id="ttl"></h1><div class="intro" id="intro"></div></div><div id="top"></div></div></section>
+  <section class="hero dots"><span class="orb o1" aria-hidden="true"><i></i></span><span class="orb o2" aria-hidden="true"><i></i></span><span class="orb o3" aria-hidden="true"><i></i></span><div class="hero-in"><div><h1 id="ttl"></h1><div class="intro" id="intro"></div></div><div id="top"></div></div></section>
   <div class="legend" id="legend" aria-label="Обозначения"></div>
   <div class="map" id="map"><svg class="wires" id="wires" aria-hidden="true"></svg>
     <div id="rows"></div>
@@ -318,7 +381,8 @@ async function openApp(raw,u,data,sraw){
   const loc=await readLocal();if(loc&&loc.doc){DOC=loc.doc;PEND=loc.pend||[]}
   $('#login').classList.add('hidden');$('#app').classList.remove('hidden');
   const t=ss.g('vol.tab');TAB=t&&(t==='all'||DOC.depts[t])?t:'all';
-  render();syncPull();
+  // сначала свежие данные (не дольше 2,5 с), потом отрисовка с анимацией — без подмены содержимого посреди появления
+  await Promise.race([syncPull(),new Promise(r=>setTimeout(r,2500))]);RENDERED=true;render();
 }
 let GUEST=false;
 $('#gbtn').onclick=()=>{GUEST=!GUEST;$('#lform').classList.toggle('guest',GUEST);$('#lu').required=!GUEST;$('#gbtn').textContent=GUEST?'Войти по логину':'Гостевой вход — только просмотр';$('#lerr').textContent='';(GUEST?$('#lp'):$('#lu')).focus()};
@@ -368,14 +432,16 @@ let NODES=[];
 
 /* ---------- отрисовка ---------- */
 const TABS=[['all','Общий масштаб'],['op','ОП'],['oo','ОО'],['otis','ОТиС']];
+let ANIM=true,RENDERED=false;
+const RM=()=>matchMedia('(prefers-reduced-motion:reduce)').matches;
 function render(){
   rebuild();
   $('#tabs').innerHTML=TABS.map(([k,l])=>`<button class="tab" role="tab" type="button" aria-selected="${k===TAB}" data-t="${k}">${l}</button>`).join('');
   $$('#tabs .tab').forEach(b=>b.onclick=()=>setTab(b.dataset.t));
   TAB==='all'?renderAll():renderDept(TAB);
-  paintChg();rewire();
+  paintChg();rewire();enterFx();
 }
-function setTab(t,open){if(t!==TAB){TAB=t;ss.s('vol.tab',t);closePanel(true);render();scrollTo({top:0})}if(open)openNode(open)}
+function setTab(t,open){if(t!==TAB){TAB=t;ANIM=true;ss.s('vol.tab',t);closePanel(true);render();scrollTo({top:0})}if(open)openNode(open)}
 const staffE=(t,lab)=>DD[t].staff?`<div class="staff">${lab?`<span class="sl">${esc(lab)}</span>`:''}<div><span>Факт</span>${E(t,'staff.fact','b')}</div><div><span>Потребность</span>${E(t,'staff.need','b')}</div></div>`:'';
 const num=v=>/^\d+$/.test((v||'').trim())?+v:null;
 const person=(t,i)=>`<div>${E(t,`people.${i}.0`,'span','r')}${E(t,`people.${i}.1`,'span','nm')}${E(t,`people.${i}.2`,'span','ps')}</div>`;
@@ -420,19 +486,43 @@ function renderAll(){
 /* провода: сплошная ось между главными узлами, пунктир к остальным */
 function wires(){
   const svg=$('#wires');if(!$('.n.main')){svg.innerHTML='';return}
-  const M=$('#map').getBoundingClientRect(),r=e=>{const b=e.getBoundingClientRect();return {l:b.left-M.left,r:b.right-M.left,t:b.top-M.top,b:b.bottom-M.top,cx:(b.left+b.right)/2-M.left,cy:(b.top+b.bottom)/2-M.top}};
-  const solid=[],dot=[],mains=$$('.n.main').map(r);
-  const wide=innerWidth>900,sx=m=>wide?m.cx:m.l+16;
-  solid.push(`M${sx(mains[0])} 0V${mains[0].t}`);
-  for(let k=0;k<mains.length-1;k++){const a=mains[k],b=mains[k+1];solid.push(`M${sx(a)} ${a.b}V${b.t}`)}
-  $$('#rows .row').forEach((row,k)=>{const m=mains[k];
+  const map=$('#map'),off=e=>{let x=0,y=0,n=e;while(n&&n!==map){x+=n.offsetLeft;y+=n.offsetTop;n=n.offsetParent}return {x,y}};
+  const r=e=>{const o=off(e),w=e.offsetWidth,h=e.offsetHeight;return {l:o.x,r:o.x+w,t:o.y,b:o.y+h,cx:o.x+w/2,cy:o.y+h/2}};
+  const mains=$$('.n.main').map(r),wide=innerWidth>900,sx=m=>wide?m.cx:m.l+16;
+  const rows=$$('#rows .row');
+  svg.innerHTML=rows.map((row,k)=>{const m=mains[k],dot=[];
+    const solid=k===0?`M${sx(m)} 0V${m.t}`:`M${sx(mains[k-1])} ${mains[k-1].b}V${m.t}`;
     row.querySelectorAll('.col>.n:not(.addn)').forEach(n=>{const s=r(n);
       if(s.l>=m.r-1){const dx=(s.l-m.r)/2;dot.push(`M${m.r} ${m.cy}C${m.r+dx} ${m.cy} ${s.l-dx} ${s.cy} ${s.l} ${s.cy}`)}
       else if(s.r<=m.l+1){const dx=(m.l-s.r)/2;dot.push(`M${m.l} ${m.cy}C${m.l-dx} ${m.cy} ${s.r+dx} ${s.cy} ${s.r} ${s.cy}`)}
       else{const x=m.l+16;dot.push(`M${x} ${m.b}V${s.cy}H${s.l}`)}});
-    row.querySelectorAll('.steps').forEach(st=>{const h=r(st.previousElementSibling),x=h.l+14;st.querySelectorAll('.n').forEach(n=>{const s=r(n);dot.push(`M${x} ${h.b}V${s.cy}H${s.l}`)})})});
-  svg.innerHTML=`<path d="${solid.join('')}" fill="none" stroke="var(--blue)" stroke-width="3"/><path d="${dot.join('')}" fill="none" stroke="var(--blue)" stroke-opacity=".55" stroke-width="2.5" stroke-dasharray="1 6" stroke-linecap="round"/>`;
+    row.querySelectorAll('.steps').forEach(st=>{const h=r(st.previousElementSibling),x=h.l+14;st.querySelectorAll('.n').forEach(n=>{const s=r(n);dot.push(`M${x} ${h.b}V${s.cy}H${s.l}`)})});
+    const st=row.classList.contains('done')?'in done':row.classList.contains('in')?'in':'';
+    return `<g class="wg ${st}" data-k="${k}"><path class="sp" pathLength="1" d="${solid}" fill="none" stroke="var(--blue)" stroke-width="3"/>${dot.length?`<path class="dp" d="${dot.join('')}" fill="none" stroke="var(--blue)" stroke-opacity=".55" stroke-width="2.5" stroke-dasharray="1 6" stroke-linecap="round"/>`:''}</g>`}).join('');
 }
+let rowIO=null,enterT=0;
+function enterFx(){
+  const B=document.body,anim=ANIM&&!RM();ANIM=false;
+  [...$$('.hero h1, .hero .intro p, .who'),...$$('.kp>div'),...$$('.legend>div')].forEach((e,i)=>e.style.setProperty('--i',i));
+  clearTimeout(enterT);B.classList.remove('enter');
+  if(anim){void B.offsetWidth;B.classList.add('enter');enterT=setTimeout(()=>B.classList.remove('enter'),2400);countUp()}
+  if(rowIO)rowIO.disconnect();
+  const rows=$$('#rows .row');
+  rows.forEach(row=>{row.querySelectorAll('.col.l>.n').forEach((n,i)=>n.style.setProperty('--i',i));row.querySelectorAll('.col.r>.n,.steps>.n').forEach((n,i)=>n.style.setProperty('--i',i))});
+  const show=(row,done)=>{row.classList.remove('rv');row.classList.add('in');if(done)row.classList.add('done');const g=$(`#wires .wg[data-k="${rows.indexOf(row)}"]`);if(g){g.classList.add('in');if(done)g.classList.add('done')}};
+  if(!anim){rows.forEach(r=>show(r,true));return}
+  rows.forEach(r=>r.classList.add('rv'));
+  rowIO=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){const row=e.target;show(row);rowIO.unobserve(row);setTimeout(()=>{row.classList.add('done');const g=$(`#wires .wg[data-k="${rows.indexOf(row)}"]`);if(g)g.classList.add('done')},1900)}}),{rootMargin:'0px 0px -8% 0px',threshold:.15});
+  rows.forEach(r=>rowIO.observe(r));
+}
+function countUp(){
+  $$('.kp b, .staff b').forEach(b=>{if(b.dataset.ek&&b.classList.contains('editing'))return;const m=b.textContent.match(/^(\d+)(\s*\/\s*(\d+))?$/);if(!m)return;
+    const a=+m[1],c=m[3]!=null?+m[3]:null,fin=b.textContent,t0=performance.now(),D=900;
+    (function f(t){const p=Math.min(1,(t-t0)/D),e=1-Math.pow(1-p,3);b.textContent=c==null?Math.round(a*e):`${Math.round(a*e)} / ${Math.round(c*e)}`;if(p<1)requestAnimationFrame(f);else b.textContent=fin})(t0)});
+}
+// прогресс прокрутки и лёгкий параллакс шапки
+addEventListener('scroll',()=>{const h=document.documentElement,max=h.scrollHeight-innerHeight;$('#progress').style.width=(max>0?scrollY/max*100:0)+'%'},{passive:true});
+addEventListener('pointermove',e=>{if(RM())return;const x=e.clientX/innerWidth-.5,y=e.clientY/innerHeight-.5;$$('.orb').forEach((o,i)=>{const k=(i+1)*10;o.style.transform=`translate3d(${-x*k}px,${-y*k}px,0)`})},{passive:true});
 let rq=0;const rewire=()=>{cancelAnimationFrame(rq);rq=requestAnimationFrame(wires)};
 addEventListener('resize',rewire);if(document.fonts)document.fonts.ready.then(rewire);
 
@@ -496,6 +586,7 @@ let cur=-1,curId=null,lastFocus=null;
 function openNode(id,keep){
   const k=NODES.findIndex(n=>idOf(n)===id);if(k<0)return;cur=k;curId=id;const {crumb,html}=body(NODES[k]);
   const st=keep?$('#pb').scrollTop:0;$('#crumb').textContent=crumb;$('#pb').innerHTML=html;$('#pb').scrollTop=st;
+  const pb=$('#pb');pb.classList.toggle('anim',!keep&&!RM());if(!keep){[...pb.children].forEach((c,i)=>c.style.setProperty('--i',i));pb.querySelectorAll('.links>.go,.list>li').forEach((c,i)=>c.style.setProperty('--j',Math.min(i,14)))}
   $$('.n.on').forEach(e=>e.classList.remove('on'));const el=$(`#rows .n[data-id="${id}"]`);if(el)el.classList.add('on');
   $('#pprev').disabled=k===0;$('#pnext').disabled=k===NODES.length-1;
   $('#pprev span').textContent=k>0?nameOf(NODES[k-1]):'Назад';$('#pnext span').textContent=k<NODES.length-1?nameOf(NODES[k+1]):'Дальше';
@@ -550,7 +641,7 @@ function setEdit(t,k,v,o){
   if(v===''&&Array.isArray(par)&&/^(P\.\d+\.b\.\d+\.items|P\.\d+\.days\.\d+\.day\.\d+\.3|P\.\d+\.b\.\d+\.items\.\d+\.sub|P\.\d+\.days\.\d+\.day\.\d+\.3\.\d+\.sub)$/.test(ks.join('.')))return doOp({k:'del',t,p:ks.join('.'),i:+l,val:par[+l]});
   doOp({k:'set',t,p:k,o,v});
 }
-function refresh(){const id=curId,open=document.body.classList.contains('open');render();if(open&&id)openNode(id,true)}
+function refresh(){const id=curId,open=document.body.classList.contains('open');ANIM=false;render();if(open&&id)openNode(id,true)}
 
 /* ---------- журнал правок ---------- */
 const canRevert=op=>{if(op.hist||op.rev||DOC.log.some(x=>x.rev===op.id))return false;if(op.k==='set')return getP(DOC.depts[op.t],op.p)===op.v;return applyOp(structuredClone(DOC),inverse(op))};
@@ -601,12 +692,12 @@ const fresh=()=>({depts:structuredClone(RAW.depts),log:[]});
 function rebase(server){const base=server||fresh();if(!base.log)base.log=[];const ids=new Set(base.log.map(x=>x.id));
   for(const op of PEND)if(!ids.has(op.id)&&applyOp(base,op))base.log.push(op);if(base.log.length>1500)base.log=base.log.slice(-1500);return base}
 async function syncPull(){
-  if(RO){try{const d=await decJSON(await getJSON('doc.enc.json'));if(!same(d,DOC)){DOC=d;refresh()}}catch(e){}syncSt('Только просмотр','');return}
+  if(RO){try{const d=await decJSON(await getJSON('doc.enc.json'));if(!same(d,DOC)){DOC=d;if(RENDERED)refresh()}}catch(e){}syncSt('Только просмотр','');return}
   if(!SYNC){try{const o=await getJSON('sync.enc.json');SYNC=JSON.parse(dec.decode(await aesDec(SKEY,o.iv,o.ct)))}catch(e){SYNC=null}}
   if(!SYNC){syncSt('Только в этом браузере','bad');return}
   try{syncSt('Синхронизация…','busy');const {data}=await ghGet();const next=rebase(data),changed=!same(next,DOC);DOC=next;await saveLocal();
     if(PEND.length||!data)await syncPush();else syncSt('Сохранено на сервере','ok');
-    if(changed&&!editing)refresh()}
+    if(changed&&!editing&&RENDERED)refresh()}
   catch(e){syncSt('Сервер недоступен: '+(e.name==='TypeError'?'нет связи с GitHub':e.message),'bad')}
 }
 let pushing=null;
@@ -620,7 +711,7 @@ async function syncPush(){
       const r=await fetch(api(),{method:'PUT',headers:{...hdr(),'Content-Type':'application/json'},body:JSON.stringify(body)});
       if(r.status===409||r.status===422){await new Promise(z=>setTimeout(z,600*(i+1)));continue}
       if(!r.ok)throw new Error(r.status===401?'токен GitHub недействителен или истёк':'GitHub '+r.status);
-      PEND=PEND.slice(sent);DOC=PEND.length?rebase(next):next;await saveLocal();clearTimeout(retryT);retryN=0;syncSt('Сохранено на сервере','ok');if(!editing)refresh();return;
+      PEND=PEND.slice(sent);DOC=PEND.length?rebase(next):next;await saveLocal();clearTimeout(retryT);retryN=0;syncSt('Сохранено на сервере','ok');if(!editing&&RENDERED)refresh();return;
     }catch(e){
       const why=e.name==='TypeError'?'нет связи с GitHub':e.message;
       if(retryN<5){retryN++;clearTimeout(retryT);retryT=setTimeout(()=>persist(),15000*retryN);syncSt(`Не сохранено: ${why}. Повторю автоматически`,'bad')}
