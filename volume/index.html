@@ -409,7 +409,7 @@ function renderAll(){
   $('#top').innerHTML=`<div class="who"><div>${E('oo','people.0.0','span','r')}${E('oo','people.0.1','span','nm')}${E('oo','people.0.2','span','ps')}</div>${DEP.map(t=>person(t,1)+staffE(t,'')).join('')}
     </div>`;
   $('#intro').innerHTML=`<p>Совокупный объём работы трёх отделов лидерской программы. Подробная карта каждого отдела — во вкладках ОП, ОО и ОТиС.</p><div class="kp"><div><b>3</b><span>отдела</span></div><div><b>${sum('S')}</b><span>этапов работы</span></div><div><b>${sum('B')}</b><span>направлений</span></div><div><b>${nRows}</b><span>пунктов расписания программы</span></div><div><b>${sum('T')}</b><span>действий и задач</span></div>${(()=>{const f=DEP.map(t=>num(DD[t].staff&&DD[t].staff.fact)),n=DEP.map(t=>num(DD[t].staff&&DD[t].staff.need));return f.every(x=>x!=null)&&n.every(x=>x!=null)?`<div><b>${f.reduce((a,b)=>a+b,0)} / ${n.reduce((a,b)=>a+b,0)}</b><span>сотрудников: факт / потребность</span></div>`:''})()}</div>`;
-  $('#ttl').textContent='Лидерская программа «100 Лидеров»';
+  $('#ttl').textContent='Программа по трудоустройству «100 Лидеров»';
   NODES=[];tot.forEach(({t,D})=>{NODES.push({k:'d',t});D.P.forEach((p,i)=>NODES.push({k:'g',t,i}))});
   $('#rows').innerHTML=tot.map(({t,D})=>{const L=[],R=[],hasDay=D.P.some(p=>p.days);D.P.forEach((p,i)=>(hasDay?(p.days?R:L):(i%2?R:L)).push(i));
     const node=i=>{const p=D.P[i],n=cPhase(D,p);return p.t.trim()?`<button class="n" type="button" data-id="g-${t}-${i}">${esc(p.t)}</button>`:''};
